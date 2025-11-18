@@ -1,0 +1,131 @@
+/// <reference types="@sveltejs/kit" />
+/// <reference no-default-lib="true"/>
+/// <reference lib="esnext" />
+/// <reference lib="webworker" />
+
+import { build, files, version } from '$service-worker';
+
+declare let self: ServiceWorkerGlobalScope;
+
+const worker = self as unknown as ServiceWorkerGlobalScope;
+const FILES = `cache${version}`;
+
+// Files to cache on install
+const to_cache = build.concat(files);
+const staticAssets = new Set(to_cache);
+
+// Install event - cache all static assets
+worker.addEventListener('install', (event) => {
+	event.waitUntil(
+		caches
+			.open(FILES)
+			.then((cache) => cache.addAll(to_cache))
+			.then(() => {
+				worker.skipWaiting();
+			})
+	);
+});
+
+// Activate event - clean up old caches
+worker.addEventListener('activate', (event) => {
+	event.waitUntil(
+		caches.keys().then(async (keys) => {
+			for (const key of keys) {
+				if (key !== FILES) await caches.delete(key);
+			}
+			worker.clients.claim();
+		})
+	);
+});
+
+// Fetch event - serve from cache when possible
+async function fetchAndCache(request: Request) {
+	const cache = await caches.open(`offline${version}`);
+
+	try {
+		const response = await fetch(request);
+		cache.put(request, response.clone());
+		return response;
+	} catch (err) {
+		const response = await cache.match(request);
+		if (response) return response;
+		throw err;
+	}
+}
+
+worker.addEventListener('fetch', (event) => {
+	if (event.request.method !== 'GET' || event.request.headers.has('range')) return;
+
+	const url = new URL(event.request.url);
+
+	// Don't try to handle e.g. data: URIs
+	const isHttp = url.protocol.startsWith('http');
+	const isDevServerRequest =
+		url.hostname === self.location.hostname && url.port !== self.location.port;
+	const isStaticAsset = url.host === self.location.host && staticAssets.has(url.pathname);
+	const skipBecauseUncached = event.request.cache === 'only-if-cached' && !isStaticAsset;
+
+	if (isHttp && !isDevServerRequest && !skipBecauseUncached) {
+		event.respondWith(
+			(async () => {
+				// Always serve static files from cache
+				const cachedAsset = isStaticAsset && (await caches.match(event.request));
+				return cachedAsset || fetchAndCache(event.request);
+			})()
+		);
+	}
+});
+
+// Push notification handling
+worker.addEventListener('push', (event) => {
+	if (!event.data) return;
+
+	const data = event.data.json();
+	const options = {
+		body: data.body || 'You have a new notification',
+		icon: '/icon-192.png',
+		badge: '/icon-192.png',
+		vibrate: [200, 100, 200],
+		data: {
+			dateOfArrival: Date.now(),
+			primaryKey: 1,
+			...data.data
+		},
+		actions: data.actions || [
+			{
+				action: 'explore',
+				title: 'View'
+			},
+			{
+				action: 'close',
+				title: 'Close'
+			}
+		]
+	};
+
+	event.waitUntil(worker.registration.showNotification(data.title || 'Pingflare', options));
+});
+
+// Notification click handling
+worker.addEventListener('notificationclick', (event) => {
+	event.notification.close();
+
+	if (event.action === 'close') {
+		return;
+	}
+
+	event.waitUntil(
+		worker.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+			// If a window is already open, focus it
+			for (const client of clientList) {
+				if ('focus' in client) {
+					return client.focus();
+				}
+			}
+			// Otherwise open a new window
+			if (worker.clients.openWindow) {
+				return worker.clients.openWindow('/');
+			}
+		})
+	);
+});
