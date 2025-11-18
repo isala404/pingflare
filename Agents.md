@@ -291,47 +291,60 @@ const legacyData: any = await fetchLegacyAPI();
 
 ## PWA and Service Worker
 
-### Service Worker (src/sw.ts)
+### Service Worker Setup
 
-- The service worker handles offline caching and push notifications
-- Modify `src/sw.ts` to customize caching strategies
-- Test PWA functionality in production mode: `npm run build && npm run preview`
+This project uses `vite-plugin-pwa` with Workbox to generate the service worker automatically.
+
+- **Service worker is generated during build**: The plugin creates `sw.js` in the build output
+- **PWA utilities available**: Use `src/lib/pwa.ts` for push notification helpers
+- **Manifest configuration**: Edit `vite.config.ts` to customize the PWA manifest
+- **Test PWA functionality**: `npm run build && npm run preview`
 
 ### Push Notifications
 
+Use the utilities from `src/lib/pwa.ts`:
+
 ```typescript
-// Request notification permission
-async function requestNotificationPermission() {
-	if (!('Notification' in window)) {
-		console.log('Notifications not supported');
-		return false;
-	}
+import {
+	requestNotificationPermission,
+	subscribeToPushNotifications,
+	showLocalNotification
+} from '$lib/pwa';
 
-	const permission = await Notification.requestPermission();
-	return permission === 'granted';
+// 1. Request permission
+const hasPermission = await requestNotificationPermission();
+
+// 2. Subscribe to push notifications (requires VAPID key)
+if (hasPermission) {
+	const subscription = await subscribeToPushNotifications('YOUR_VAPID_PUBLIC_KEY');
+	// Send subscription to your backend
 }
 
-// Subscribe to push notifications
-async function subscribeToPush() {
-	const registration = await navigator.serviceWorker.ready;
-	const subscription = await registration.pushManager.subscribe({
-		userVisibleOnly: true,
-		applicationServerKey: '<your-vapid-public-key>'
-	});
-
-	// Send subscription to your server
-	await fetch('/api/subscribe', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(subscription)
-	});
-}
+// 3. Show a local notification (for testing)
+await showLocalNotification('Test Notification', {
+	body: 'This is a test notification',
+	icon: '/icon.svg'
+});
 ```
+
+### Generating VAPID Keys
+
+To enable push notifications, generate VAPID keys:
+
+```bash
+npm install -g web-push
+web-push generate-vapid-keys
+```
+
+Store the public key in your environment variables and use it in the subscription call.
 
 ### Manifest Configuration
 
-- Edit `vite.config.ts` to customize the PWA manifest
+Edit `vite.config.ts` to customize the PWA manifest:
+
 - Update app name, colors, and icons as needed
+- Configure caching strategies in the `workbox` section
+- Add runtime caching for external resources
 
 ## Project Structure
 
@@ -340,20 +353,31 @@ pingflare/
 ├── src/
 │   ├── lib/              # Shared components and utilities
 │   │   ├── components/   # Reusable Svelte components
+│   │   ├── pwa.ts        # PWA and push notification utilities
 │   │   └── utils/        # Helper functions
 │   ├── routes/           # SvelteKit routes (file-based routing)
 │   │   ├── +layout.svelte
 │   │   ├── +page.svelte
+│   │   ├── layout.css    # Global Tailwind CSS
 │   │   └── api/          # API routes
-│   ├── sw.ts             # Service worker for PWA
 │   └── app.html          # HTML template
-├── static/               # Static assets (icons, images)
+├── static/               # Static assets (icons, images, robots.txt)
+├── Agents.md             # Development guidelines (THIS FILE)
 ├── vite.config.ts        # Vite configuration (includes PWA setup)
 ├── svelte.config.js      # SvelteKit configuration
 ├── tsconfig.json         # TypeScript configuration
 ├── eslint.config.js      # ESLint configuration
 └── .prettierrc           # Prettier configuration
 ```
+
+**Note**: The service worker is automatically generated during build in `.svelte-kit/output/client/sw.js`
+├── vite.config.ts # Vite configuration (includes PWA setup)
+├── svelte.config.js # SvelteKit configuration
+├── tsconfig.json # TypeScript configuration
+├── eslint.config.js # ESLint configuration
+└── .prettierrc # Prettier configuration
+
+````
 
 ## File Naming Conventions
 
@@ -385,7 +409,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	// Process body
 	return json({ success: true });
 };
-```
+````
 
 ## Environment Variables
 

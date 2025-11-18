@@ -1,6 +1,6 @@
 /**
  * PWA Push Notification Utilities
- * 
+ *
  * This file provides utilities for handling push notifications in the PWA.
  * To enable push notifications, you need to:
  * 1. Generate VAPID keys (use web-push library: npx web-push generate-vapid-keys)
@@ -138,7 +138,7 @@ export async function isPushNotificationSubscribed(): Promise<boolean> {
 /**
  * Convert VAPID key from base64 to Uint8Array
  */
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 	const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
 	const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
 
@@ -149,7 +149,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 		outputArray[i] = rawData.charCodeAt(i);
 	}
 
-	return outputArray;
+	return outputArray as Uint8Array<ArrayBuffer>;
 }
 
 /**
