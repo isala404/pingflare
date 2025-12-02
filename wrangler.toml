@@ -1,0 +1,22 @@
+name = "pingflare"
+account_id = "cfbf72105708cad9f059f27b7edfe536"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Pages will automatically detect the build output
+pages_build_output_dir = ".svelte-kit/cloudflare"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "pingflare-db"
+database_id = "74b11544-7a08-46b5-851c-8ec5ef153e70"
+
+# KV Namespace for caching current status
+[[kv_namespaces]]
+binding = "STATUS_CACHE"
+id = "bcb87ba93beb493bad285feff7362a2e"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
