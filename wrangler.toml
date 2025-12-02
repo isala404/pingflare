@@ -1,5 +1,4 @@
 name = "pingflare"
-account_id = "cfbf72105708cad9f059f27b7edfe536"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
