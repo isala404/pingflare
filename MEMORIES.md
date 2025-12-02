@@ -14,7 +14,7 @@ Project Context
 - Goal: Monitor ~30 services on Hetzner dedicated server from external Cloudflare infrastructure
 - Inspiration: Uptime Kuma but serverless on Cloudflare ecosystem
 - Deployed at: https://pingflare.pages.dev
-- Current state: MVP complete with HTTP monitoring, dashboard, KV caching
+- Current state: MVP complete with HTTP monitoring, dashboard, KV caching, authentication
 
 Cloudflare Resources
 
@@ -28,6 +28,18 @@ API Endpoints
 - GET/PUT/DELETE /api/monitors/[id] - Single monitor CRUD
 - GET /api/cron - Trigger health checks (manual or cron)
 - GET /api/status - Fast status from KV cache
+- GET /api/auth/status - Check setup state and current user
+- POST /api/auth/setup - Create initial admin (one-time)
+- POST /api/auth/login - Authenticate and create session
+- POST /api/auth/logout - Delete session
+
+Authentication
+
+- Session-based auth with cookies (7-day expiry)
+- SHA-256 password hashing via Web Crypto API
+- Role-based permissions: admin/editor/viewer
+- First visit redirects to /setup, subsequent visits to /login
+- Protected routes: all except /login, /setup, /api/auth/*
 
 Future Cloudflare Products
 

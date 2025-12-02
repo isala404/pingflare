@@ -1,8 +1,13 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { MonitorWithStatus, CreateMonitorInput } from '$lib/types/monitor';
+	import type { PageData } from './$types';
 	import MonitorCard from '$lib/components/MonitorCard.svelte';
 	import MonitorForm from '$lib/components/MonitorForm.svelte';
 	import Modal from '$lib/components/Modal.svelte';
+
+	let { data }: { data: PageData } = $props();
 
 	let monitors = $state<MonitorWithStatus[]>([]);
 	let loading = $state(true);
@@ -126,6 +131,20 @@
 
 	let upCount = $derived(monitors.filter((m) => m.current_status === 'up').length);
 	let downCount = $derived(monitors.filter((m) => m.current_status === 'down').length);
+
+	let loggingOut = $state(false);
+
+	async function handleLogout() {
+		loggingOut = true;
+		try {
+			await fetch('/api/auth/logout', { method: 'POST' });
+			await goto(resolve('/login'));
+		} catch {
+			error = 'Failed to log out';
+		} finally {
+			loggingOut = false;
+		}
+	}
 </script>
 
 <div class="min-h-screen bg-gray-50">
@@ -148,6 +167,16 @@
 				>
 					Add Monitor
 				</button>
+				<div class="ml-2 flex items-center gap-2 border-l border-gray-200 pl-4">
+					<span class="text-sm text-gray-600">{data.user?.username}</span>
+					<button
+						onclick={handleLogout}
+						disabled={loggingOut}
+						class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+					>
+						{loggingOut ? 'Logging out...' : 'Logout'}
+					</button>
+				</div>
 			</div>
 		</div>
 	</header>

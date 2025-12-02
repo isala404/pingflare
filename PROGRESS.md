@@ -45,3 +45,16 @@ Deployed to Cloudflare Pages.
 - Live at: https://pingflare.pages.dev
 - All bindings (D1, KV) working correctly
 - Verified: monitor creation, health checks, status API, dashboard UI
+
+Implemented authentication system with setup flow.
+
+- Migration 0002_users.sql: users, sessions, app_settings tables
+- Auth types and permissions in src/lib/types/auth.ts (admin/editor/viewer roles)
+- Auth service in src/lib/server/db/auth.ts (SHA-256 password hashing, 7-day sessions)
+- Server hooks in src/hooks.server.ts for route protection
+- /api/auth/setup - First-time admin account creation
+- /api/auth/login, /api/auth/logout, /api/auth/status endpoints
+- /setup page for initial admin creation
+- /login page with form validation
+- Dashboard header with username display and logout button
+- Verified: redirect flow (setup -> login -> dashboard), session persistence, logout
