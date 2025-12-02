@@ -1,0 +1,96 @@
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
+import {
+	getMonitorById,
+	updateMonitor,
+	deleteMonitor,
+	getLastCheck,
+	getUptime24h,
+	getRecentChecks
+} from '$lib/server/db/monitors';
+import type { CreateMonitorInput, MonitorWithStatus } from '$lib/types/monitor';
+
+export const GET: RequestHandler = async ({ params, platform, url }) => {
+	if (!platform?.env?.DB) {
+		return json({ error: 'Database not available' }, { status: 500 });
+	}
+
+	const db = platform.env.DB;
+	const monitor = await getMonitorById(db, params.id);
+
+	if (!monitor) {
+		return json({ error: 'Monitor not found' }, { status: 404 });
+	}
+
+	const lastCheck = await getLastCheck(db, monitor.id);
+	const uptime24h = await getUptime24h(db, monitor.id);
+
+	const includeChecks = url.searchParams.get('checks') === 'true';
+	const checksLimit = parseInt(url.searchParams.get('limit') || '100', 10);
+
+	const result: MonitorWithStatus & { checks?: unknown[] } = {
+		...monitor,
+		current_status: lastCheck?.status ?? null,
+		last_check: lastCheck,
+		uptime_24h: uptime24h
+	};
+
+	if (includeChecks) {
+		result.checks = await getRecentChecks(db, monitor.id, checksLimit);
+	}
+
+	return json(result);
+};
+
+export const PUT: RequestHandler = async ({ params, request, platform }) => {
+	if (!platform?.env?.DB) {
+		return json({ error: 'Database not available' }, { status: 500 });
+	}
+
+	const db = platform.env.DB;
+
+	let input: Partial<CreateMonitorInput>;
+	try {
+		input = await request.json();
+	} catch {
+		return json({ error: 'Invalid JSON body' }, { status: 400 });
+	}
+
+	if (input.type && !['http', 'tcp', 'dns', 'push'].includes(input.type)) {
+		return json({ error: 'Invalid monitor type' }, { status: 400 });
+	}
+
+	try {
+		const monitor = await updateMonitor(db, params.id, input);
+
+		if (!monitor) {
+			return json({ error: 'Monitor not found' }, { status: 404 });
+		}
+
+		return json(monitor);
+	} catch (err) {
+		console.error('Failed to update monitor:', err);
+		return json({ error: 'Failed to update monitor' }, { status: 500 });
+	}
+};
+
+export const DELETE: RequestHandler = async ({ params, platform }) => {
+	if (!platform?.env?.DB) {
+		return json({ error: 'Database not available' }, { status: 500 });
+	}
+
+	const db = platform.env.DB;
+
+	try {
+		const deleted = await deleteMonitor(db, params.id);
+
+		if (!deleted) {
+			return json({ error: 'Monitor not found' }, { status: 404 });
+		}
+
+		return json({ success: true });
+	} catch (err) {
+		console.error('Failed to delete monitor:', err);
+		return json({ error: 'Failed to delete monitor' }, { status: 500 });
+	}
+};
