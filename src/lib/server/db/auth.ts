@@ -47,23 +47,24 @@ export async function createUser(db: D1Database, input: CreateUserInput): Promis
 
 	await db
 		.prepare(
-			`INSERT INTO users (id, username, password_hash, role, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
+			`INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
 		)
-		.bind(id, input.username, passwordHash, role, now, now)
+		.bind(id, input.name, input.email, passwordHash, role, now, now)
 		.run();
 
 	return {
 		id,
-		username: input.username,
+		name: input.name,
+		email: input.email,
 		role,
 		created_at: now,
 		last_login_at: null
 	};
 }
 
-export async function getUserByUsername(db: D1Database, username: string): Promise<User | null> {
-	return db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first<User>();
+export async function getUserByEmail(db: D1Database, email: string): Promise<User | null> {
+	return db.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<User>();
 }
 
 export async function getUserById(db: D1Database, id: string): Promise<User | null> {
@@ -72,7 +73,9 @@ export async function getUserById(db: D1Database, id: string): Promise<User | nu
 
 export async function getAllUsers(db: D1Database): Promise<UserPublic[]> {
 	const result = await db
-		.prepare('SELECT id, username, role, created_at, last_login_at FROM users ORDER BY created_at')
+		.prepare(
+			'SELECT id, name, email, role, created_at, last_login_at FROM users ORDER BY created_at'
+		)
 		.all<UserPublic>();
 	return result.results;
 }
@@ -85,6 +88,18 @@ export async function updateUserRole(
 	const result = await db
 		.prepare("UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?")
 		.bind(role, userId)
+		.run();
+	return result.meta.changes > 0;
+}
+
+export async function updateUserName(
+	db: D1Database,
+	userId: string,
+	name: string
+): Promise<boolean> {
+	const result = await db
+		.prepare("UPDATE users SET name = ?, updated_at = datetime('now') WHERE id = ?")
+		.bind(name, userId)
 		.run();
 	return result.meta.changes > 0;
 }
@@ -102,6 +117,16 @@ export async function updateUserPassword(
 	return result.meta.changes > 0;
 }
 
+export async function verifyUserPassword(
+	db: D1Database,
+	userId: string,
+	password: string
+): Promise<boolean> {
+	const user = await getUserById(db, userId);
+	if (!user) return false;
+	return verifyPassword(password, user.password_hash);
+}
+
 export async function deleteUser(db: D1Database, userId: string): Promise<boolean> {
 	const result = await db.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
 	return result.meta.changes > 0;
@@ -109,10 +134,10 @@ export async function deleteUser(db: D1Database, userId: string): Promise<boolea
 
 export async function validateCredentials(
 	db: D1Database,
-	username: string,
+	email: string,
 	password: string
 ): Promise<User | null> {
-	const user = await getUserByUsername(db, username);
+	const user = await getUserByEmail(db, email);
 	if (!user) return null;
 
 	const isValid = await verifyPassword(password, user.password_hash);
@@ -178,7 +203,8 @@ export async function cleanupExpiredSessions(db: D1Database): Promise<number> {
 export function userToPublic(user: User): UserPublic {
 	return {
 		id: user.id,
-		username: user.username,
+		name: user.name,
+		email: user.email,
 		role: user.role,
 		created_at: user.created_at,
 		last_login_at: user.last_login_at

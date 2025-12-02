@@ -48,13 +48,17 @@ Deployed to Cloudflare Pages.
 
 Implemented authentication system with setup flow.
 
-- Migration 0002_users.sql: users, sessions, app_settings tables
+- Migration 0002_users.sql: users (name, email, password), sessions, app_settings tables
 - Auth types and permissions in src/lib/types/auth.ts (admin/editor/viewer roles)
 - Auth service in src/lib/server/db/auth.ts (SHA-256 password hashing, 7-day sessions)
 - Server hooks in src/hooks.server.ts for route protection
-- /api/auth/setup - First-time admin account creation
-- /api/auth/login, /api/auth/logout, /api/auth/status endpoints
-- /setup page for initial admin creation
-- /login page with form validation
-- Dashboard header with username display and logout button
-- Verified: redirect flow (setup -> login -> dashboard), session persistence, logout
+- /api/auth/setup - First-time admin (name, email, password)
+- /api/auth/login - Email/password authentication
+- /api/auth/logout, /api/auth/status endpoints
+- /api/auth/profile - Update user name
+- /api/auth/password - Change password with current password verification
+- /setup page for initial admin creation (name, email, password)
+- /login page with email/password form
+- /settings page with profile editing and password change
+- Dashboard header with name display linked to settings
+- Verified: setup, login, profile update, password change all working

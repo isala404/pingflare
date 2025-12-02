@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
-	let username = $state('');
+	let email = $state('');
 	let password = $state('');
 	let error = $state('');
 	let isSubmitting = $state(false);
@@ -11,8 +11,8 @@
 		e.preventDefault();
 		error = '';
 
-		if (!username || !password) {
-			error = 'Username and password are required';
+		if (!email || !password) {
+			error = 'Email and password are required';
 			return;
 		}
 
@@ -22,7 +22,7 @@
 			const response = await fetch('/api/auth/login', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ username, password })
+				body: JSON.stringify({ email, password })
 			});
 
 			const data = (await response.json()) as { error?: string; success?: boolean };
@@ -60,12 +60,12 @@
 
 			<form onsubmit={handleSubmit} class="space-y-6">
 				<div>
-					<label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+					<label for="email" class="block text-sm font-medium text-gray-700">Email</label>
 					<input
-						type="text"
-						id="username"
-						bind:value={username}
-						autocomplete="username"
+						type="email"
+						id="email"
+						bind:value={email}
+						autocomplete="email"
 						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 					/>
 				</div>

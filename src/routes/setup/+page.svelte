@@ -2,7 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
-	let username = $state('');
+	let name = $state('');
+	let email = $state('');
 	let password = $state('');
 	let confirmPassword = $state('');
 	let error = $state('');
@@ -12,13 +13,18 @@
 		e.preventDefault();
 		error = '';
 
-		if (!username || !password || !confirmPassword) {
+		if (!name || !email || !password || !confirmPassword) {
 			error = 'All fields are required';
 			return;
 		}
 
-		if (username.length < 3) {
-			error = 'Username must be at least 3 characters';
+		if (name.length < 2) {
+			error = 'Name must be at least 2 characters';
+			return;
+		}
+
+		if (!email.includes('@')) {
+			error = 'Please enter a valid email address';
 			return;
 		}
 
@@ -38,7 +44,7 @@
 			const response = await fetch('/api/auth/setup', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ username, password })
+				body: JSON.stringify({ name, email, password })
 			});
 
 			const data = (await response.json()) as { error?: string; success?: boolean };
@@ -76,14 +82,26 @@
 
 			<form onsubmit={handleSubmit} class="space-y-6">
 				<div>
-					<label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+					<label for="name" class="block text-sm font-medium text-gray-700">Name</label>
 					<input
 						type="text"
-						id="username"
-						bind:value={username}
-						autocomplete="username"
+						id="name"
+						bind:value={name}
+						autocomplete="name"
 						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-						placeholder="admin"
+						placeholder="Your name"
+					/>
+				</div>
+
+				<div>
+					<label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+					<input
+						type="email"
+						id="email"
+						bind:value={email}
+						autocomplete="email"
+						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+						placeholder="admin@example.com"
 					/>
 				</div>
 

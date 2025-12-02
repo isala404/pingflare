@@ -2,7 +2,8 @@ export type UserRole = 'admin' | 'editor' | 'viewer';
 
 export interface User {
 	id: string;
-	username: string;
+	name: string;
+	email: string;
 	password_hash: string;
 	role: UserRole;
 	created_at: string;
@@ -19,21 +20,32 @@ export interface Session {
 
 export interface UserPublic {
 	id: string;
-	username: string;
+	name: string;
+	email: string;
 	role: UserRole;
 	created_at: string;
 	last_login_at: string | null;
 }
 
 export interface CreateUserInput {
-	username: string;
+	name: string;
+	email: string;
 	password: string;
 	role?: UserRole;
 }
 
 export interface LoginInput {
-	username: string;
+	email: string;
 	password: string;
+}
+
+export interface UpdateProfileInput {
+	name: string;
+}
+
+export interface ChangePasswordInput {
+	currentPassword: string;
+	newPassword: string;
 }
 
 export interface AuthState {

@@ -28,19 +28,23 @@ export const POST: RequestHandler = async ({ request, cookies, platform }) => {
 		return json({ error: 'Application is already set up' }, { status: 400 });
 	}
 
-	let input: { username: string; password: string };
+	let input: { name: string; email: string; password: string };
 	try {
 		input = await request.json();
 	} catch {
 		return json({ error: 'Invalid JSON body' }, { status: 400 });
 	}
 
-	if (!input.username || !input.password) {
-		return json({ error: 'Username and password are required' }, { status: 400 });
+	if (!input.name || !input.email || !input.password) {
+		return json({ error: 'Name, email and password are required' }, { status: 400 });
 	}
 
-	if (input.username.length < 3) {
-		return json({ error: 'Username must be at least 3 characters' }, { status: 400 });
+	if (input.name.length < 2) {
+		return json({ error: 'Name must be at least 2 characters' }, { status: 400 });
+	}
+
+	if (!input.email.includes('@')) {
+		return json({ error: 'Please enter a valid email address' }, { status: 400 });
 	}
 
 	if (input.password.length < 8) {
@@ -50,7 +54,8 @@ export const POST: RequestHandler = async ({ request, cookies, platform }) => {
 	try {
 		// Create admin user
 		const user = await createUser(db, {
-			username: input.username,
+			name: input.name,
+			email: input.email,
 			password: input.password,
 			role: 'admin'
 		});

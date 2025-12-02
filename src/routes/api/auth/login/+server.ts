@@ -9,22 +9,22 @@ export const POST: RequestHandler = async ({ request, cookies, platform }) => {
 
 	const db = platform.env.DB;
 
-	let input: { username: string; password: string };
+	let input: { email: string; password: string };
 	try {
 		input = await request.json();
 	} catch {
 		return json({ error: 'Invalid JSON body' }, { status: 400 });
 	}
 
-	if (!input.username || !input.password) {
-		return json({ error: 'Username and password are required' }, { status: 400 });
+	if (!input.email || !input.password) {
+		return json({ error: 'Email and password are required' }, { status: 400 });
 	}
 
 	try {
-		const user = await validateCredentials(db, input.username, input.password);
+		const user = await validateCredentials(db, input.email, input.password);
 
 		if (!user) {
-			return json({ error: 'Invalid username or password' }, { status: 401 });
+			return json({ error: 'Invalid email or password' }, { status: 401 });
 		}
 
 		// Create session

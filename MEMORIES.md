@@ -29,17 +29,21 @@ API Endpoints
 - GET /api/cron - Trigger health checks (manual or cron)
 - GET /api/status - Fast status from KV cache
 - GET /api/auth/status - Check setup state and current user
-- POST /api/auth/setup - Create initial admin (one-time)
-- POST /api/auth/login - Authenticate and create session
+- POST /api/auth/setup - Create initial admin (name, email, password)
+- POST /api/auth/login - Email/password authentication
 - POST /api/auth/logout - Delete session
+- PUT /api/auth/profile - Update user name
+- PUT /api/auth/password - Change password
 
 Authentication
 
 - Session-based auth with cookies (7-day expiry)
 - SHA-256 password hashing via Web Crypto API
+- User fields: name, email (login), password
 - Role-based permissions: admin/editor/viewer
 - First visit redirects to /setup, subsequent visits to /login
 - Protected routes: all except /login, /setup, /api/auth/*
+- Settings page at /settings for profile and password management
 
 Future Cloudflare Products
 

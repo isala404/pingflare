@@ -168,7 +168,9 @@
 					Add Monitor
 				</button>
 				<div class="ml-2 flex items-center gap-2 border-l border-gray-200 pl-4">
-					<span class="text-sm text-gray-600">{data.user?.username}</span>
+					<a href={resolve('/settings')} class="text-sm text-gray-600 hover:text-gray-900">
+						{data.user?.name}
+					</a>
 					<button
 						onclick={handleLogout}
 						disabled={loggingOut}
