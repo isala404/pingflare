@@ -62,3 +62,20 @@ Implemented authentication system with setup flow.
 - /settings page with profile editing and password change
 - Dashboard header with name display linked to settings
 - Verified: setup, login, profile update, password change all working
+
+Added JavaScript health check evaluator for custom scripts.
+
+- Migration 0003_script_checks.sql: Added script column to monitors table
+- Monitor type 'script' added to MonitorType union
+- Script executor in src/lib/server/checkers/script.ts
+- Sandboxed JS execution using Function constructor with strict mode
+- Context object provides fetch (with timeout/abort) and log functions
+- Scripts must define check(ctx) returning {status: 'up'|'down'|'degraded', message?}
+- Timeout protection with Promise.race
+- Integrated into checker orchestrator in src/lib/server/checkers/index.ts
+- UI textarea in MonitorForm.svelte for script input with example template
+- 24 unit tests in src/lib/server/checkers/script.test.ts covering:
+  - Basic script execution, status returns, error handling
+  - Fetch mocking and multiple concurrent fetches
+  - Logging, timeout behavior, strict mode enforcement
+- Deployed and verified working

@@ -27,8 +27,8 @@ export async function createMonitor(db: D1Database, input: CreateMonitorInput): 
 
 	await db
 		.prepare(
-			`INSERT INTO monitors (id, name, type, url, hostname, port, method, expected_status, keyword, keyword_type, interval_seconds, timeout_ms, retry_count, active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			`INSERT INTO monitors (id, name, type, url, hostname, port, method, expected_status, keyword, keyword_type, interval_seconds, timeout_ms, retry_count, active, script, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.bind(
 			id,
@@ -45,6 +45,7 @@ export async function createMonitor(db: D1Database, input: CreateMonitorInput): 
 			input.timeout_ms ?? 30000,
 			input.retry_count ?? 3,
 			input.active !== false ? 1 : 0,
+			input.script ?? null,
 			now,
 			now
 		)
@@ -122,6 +123,10 @@ export async function updateMonitor(
 	if (input.active !== undefined) {
 		updates.push('active = ?');
 		values.push(input.active ? 1 : 0);
+	}
+	if (input.script !== undefined) {
+		updates.push('script = ?');
+		values.push(input.script);
 	}
 
 	updates.push('updated_at = ?');

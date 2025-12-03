@@ -2,7 +2,7 @@ Tooling
 
 - Stack: SvelteKit 2, Svelte 5, TypeScript, Tailwind CSS 4
 - Package manager: bun
-- Test command: (not configured yet)
+- Test command: bun test (vitest)
 - Lint command: bun lint
 - Format command: bun format
 - Check command: bun check
@@ -14,7 +14,7 @@ Project Context
 - Goal: Monitor ~30 services on Hetzner dedicated server from external Cloudflare infrastructure
 - Inspiration: Uptime Kuma but serverless on Cloudflare ecosystem
 - Deployed at: https://pingflare.pages.dev
-- Current state: MVP complete with HTTP monitoring, dashboard, KV caching, authentication
+- Current state: MVP complete with HTTP/Script monitoring, dashboard, KV caching, authentication
 
 Cloudflare Resources
 
@@ -42,8 +42,17 @@ Authentication
 - User fields: name, email (login), password
 - Role-based permissions: admin/editor/viewer
 - First visit redirects to /setup, subsequent visits to /login
-- Protected routes: all except /login, /setup, /api/auth/*
+- Protected routes: all except /login, /setup, /api/auth/\*
 - Settings page at /settings for profile and password management
+
+Script Checker
+
+- Monitor type 'script' for custom JavaScript health checks
+- Scripts execute in sandboxed Function constructor with strict mode
+- Context object provides: fetch (with timeout), log (debug capture)
+- Scripts must define check(ctx) returning {status, message?, responseTime?, statusCode?}
+- Timeout enforced via Promise.race
+- Example use cases: multi-endpoint checks, JSON response validation, conditional logic
 
 Future Cloudflare Products
 

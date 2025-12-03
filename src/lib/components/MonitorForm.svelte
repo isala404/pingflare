@@ -1,6 +1,24 @@
 <script lang="ts">
 	import type { MonitorType, KeywordType, MonitorWithStatus } from '$lib/types/monitor';
 
+	const defaultScript = `// Health check script
+// The check function receives a context with fetch and log
+async function check(ctx) {
+  // Make HTTP request
+  const response = await ctx.fetch('https://api.example.com/health');
+  const data = await response.json();
+
+  // Return status based on response
+  if (data.status === 'healthy') {
+    return { status: 'up' };
+  }
+
+  return {
+    status: 'down',
+    message: data.error || 'Service unhealthy'
+  };
+}`;
+
 	let {
 		monitor = null,
 		onSave,
@@ -23,6 +41,7 @@
 	let intervalSeconds = $state(monitor?.interval_seconds?.toString() ?? '60');
 	let timeoutMs = $state(monitor?.timeout_ms?.toString() ?? '30000');
 	let active = $state(monitor?.active !== 0);
+	let script = $state(monitor?.script ?? defaultScript);
 
 	let isSubmitting = $state(false);
 	let error = $state('');
@@ -46,6 +65,16 @@
 			return;
 		}
 
+		if (type === 'script' && !script.trim()) {
+			error = 'Script is required for Script monitors';
+			return;
+		}
+
+		if (type === 'script' && !script.includes('function check')) {
+			error = 'Script must define a check(ctx) function';
+			return;
+		}
+
 		isSubmitting = true;
 
 		const formData = new FormData();
@@ -61,6 +90,7 @@
 		formData.set('interval_seconds', intervalSeconds);
 		formData.set('timeout_ms', timeoutMs);
 		formData.set('active', active ? '1' : '0');
+		formData.set('script', type === 'script' ? script : '');
 
 		if (monitor?.id) {
 			formData.set('id', monitor.id);
@@ -100,6 +130,7 @@
 			class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 		>
 			<option value="http">HTTP/HTTPS</option>
+			<option value="script">Script (JavaScript)</option>
 			<option value="tcp">TCP</option>
 			<option value="dns" disabled>DNS (coming soon)</option>
 			<option value="push" disabled>Push (coming soon)</option>
@@ -173,6 +204,26 @@
 					<option value="absent">Must be absent</option>
 				</select>
 			</div>
+		</div>
+	{/if}
+
+	{#if type === 'script'}
+		<div>
+			<label for="script" class="block text-sm font-medium text-gray-700">
+				Health Check Script
+			</label>
+			<p class="mb-2 text-xs text-gray-500">
+				Write JavaScript to check health. Use <code class="bg-gray-100 px-1">ctx.fetch()</code> for
+				HTTP requests. Return
+				<code class="bg-gray-100 px-1">{`{ status: 'up' | 'down' | 'degraded' }`}</code>.
+			</p>
+			<textarea
+				id="script"
+				bind:value={script}
+				rows="12"
+				class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+				placeholder={defaultScript}
+			></textarea>
 		</div>
 	{/if}
 

@@ -1,10 +1,21 @@
 import type { Monitor } from '$lib/types/monitor';
 import { checkHttp, type CheckResult } from './http';
+import { executeScript } from './script';
 
 export async function runCheck(monitor: Monitor): Promise<CheckResult> {
 	switch (monitor.type) {
 		case 'http':
 			return checkHttp(monitor);
+		case 'script':
+			if (!monitor.script) {
+				return {
+					status: 'down',
+					responseTimeMs: 0,
+					statusCode: null,
+					errorMessage: 'No script configured'
+				};
+			}
+			return executeScript(monitor.script, monitor.timeout_ms);
 		case 'tcp':
 			// TODO: Implement TCP checker using connect() API
 			return {

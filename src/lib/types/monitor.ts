@@ -1,4 +1,4 @@
-export type MonitorType = 'http' | 'tcp' | 'dns' | 'push';
+export type MonitorType = 'http' | 'tcp' | 'dns' | 'push' | 'script';
 export type MonitorStatus = 'up' | 'down' | 'degraded';
 export type KeywordType = 'present' | 'absent';
 export type IncidentStatus = 'ongoing' | 'resolved';
@@ -19,6 +19,7 @@ export interface Monitor {
 	timeout_ms: number;
 	retry_count: number;
 	active: number;
+	script: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -72,6 +73,7 @@ export interface CreateMonitorInput {
 	timeout_ms?: number;
 	retry_count?: number;
 	active?: boolean;
+	script?: string;
 }
 
 export interface UpdateMonitorInput extends Partial<CreateMonitorInput> {

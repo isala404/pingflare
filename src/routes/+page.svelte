@@ -54,7 +54,8 @@
 			timeout_ms: formData.get('timeout_ms')
 				? parseInt(formData.get('timeout_ms') as string, 10)
 				: undefined,
-			active: formData.get('active') === '1'
+			active: formData.get('active') === '1',
+			script: (formData.get('script') as string) || undefined
 		};
 
 		const url = id ? `/api/monitors/${id}` : '/api/monitors';
