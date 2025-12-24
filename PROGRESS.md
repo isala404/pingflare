@@ -88,3 +88,33 @@ Fixed script monitor creation bug and added scheduled health checks.
 - Created separate scheduled Worker at workers/scheduler/ for automatic cron triggers
 - Scheduler runs every minute, calls /api/cron endpoint
 - Deploy scheduler: cd workers/scheduler && wrangler deploy
+
+Rewrote script checker for Cloudflare Workers compatibility.
+
+- Cloudflare Workers blocks eval/new Function at runtime
+- Replaced JS interpreter approach with URL extraction + HTTP status logic
+- Script URLs extracted via regex, requests made on host, status derived from response codes
+- Added /api/cron and /api/status to public paths in hooks.server.ts
+- Fixed PWA workbox config: disabled navigateFallback for dynamic routes
+- Migration 0004_fix_type_constraint.sql: Recreated monitors table with 'script' in CHECK constraint
+
+Removed monitor type concept, script-only with visual builder.
+
+- Simplified types: removed MonitorType, KeywordType, consolidated Monitor interface
+- Deleted http.ts checker, script executor handles all monitors
+- API endpoints simplified: no type validation, script required
+- Created shared DSL types in src/lib/types/script.ts (ScriptDSL, ScriptStep, Assertion)
+- New ScriptBuilder.svelte: visual UI for building multi-step scripts
+- New ScriptEditor.svelte: code mode with JSON validation and formatting
+- MonitorForm.svelte rebuilt with Visual Builder / Code toggle
+- MonitorCard shows step count and first URL instead of type-specific fields
+- Tests rewritten for JSON DSL format (13 tests, bun:test)
+- tsconfig.json excludes test files from svelte-check
+
+Replaced modal with dedicated pages for add/edit monitors.
+
+- Created /monitors/new page for adding monitors
+- Created /monitors/[id]/edit page with server-side monitor loading
+- Updated MonitorCard to use link for edit instead of callback
+- Dashboard now navigates to pages instead of opening modal
+- Full page layout provides more space for complex script builder UI

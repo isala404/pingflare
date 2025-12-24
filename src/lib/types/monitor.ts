@@ -1,25 +1,15 @@
-export type MonitorType = 'http' | 'tcp' | 'dns' | 'push' | 'script';
 export type MonitorStatus = 'up' | 'down' | 'degraded';
-export type KeywordType = 'present' | 'absent';
 export type IncidentStatus = 'ongoing' | 'resolved';
 export type NotificationChannelType = 'webhook' | 'email' | 'slack' | 'discord' | 'telegram';
 
 export interface Monitor {
 	id: string;
 	name: string;
-	type: MonitorType;
-	url: string | null;
-	hostname: string | null;
-	port: number | null;
-	method: string;
-	expected_status: number;
-	keyword: string | null;
-	keyword_type: KeywordType | null;
+	script: string;
 	interval_seconds: number;
 	timeout_ms: number;
 	retry_count: number;
 	active: number;
-	script: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -61,19 +51,11 @@ export interface MonitorNotification {
 
 export interface CreateMonitorInput {
 	name: string;
-	type: MonitorType;
-	url?: string;
-	hostname?: string;
-	port?: number;
-	method?: string;
-	expected_status?: number;
-	keyword?: string;
-	keyword_type?: KeywordType;
+	script: string;
 	interval_seconds?: number;
 	timeout_ms?: number;
 	retry_count?: number;
 	active?: boolean;
-	script?: string;
 }
 
 export interface UpdateMonitorInput extends Partial<CreateMonitorInput> {

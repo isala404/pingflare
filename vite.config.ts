@@ -43,14 +43,24 @@ export default defineConfig({
 				]
 			},
 			workbox: {
-				globPatterns: ['client/**/*.{js,css,html,ico,png,svg,webp,webmanifest}'],
-				// Use modifyURLPrefix to skip default prerendered pattern addition
-				modifyURLPrefix: {
-					'client/': '/'
-				}
+				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,webmanifest}'],
+				navigateFallback: null,
+				runtimeCaching: [
+					{
+						urlPattern: /^https:\/\/.*\/_app\/.*/,
+						handler: 'CacheFirst',
+						options: {
+							cacheName: 'app-assets',
+							expiration: {
+								maxEntries: 100,
+								maxAgeSeconds: 60 * 60 * 24 * 30
+							}
+						}
+					}
+				]
 			},
 			devOptions: {
-				enabled: true
+				enabled: false
 			}
 		})
 	]

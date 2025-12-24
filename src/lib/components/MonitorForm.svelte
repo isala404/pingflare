@@ -1,23 +1,9 @@
 <script lang="ts">
-	import type { MonitorType, KeywordType, MonitorWithStatus } from '$lib/types/monitor';
-
-	const defaultScript = `// Health check script
-// The check function receives a context with fetch and log
-async function check(ctx) {
-  // Make HTTP request
-  const response = await ctx.fetch('https://api.example.com/health');
-  const data = await response.json();
-
-  // Return status based on response
-  if (data.status === 'healthy') {
-    return { status: 'up' };
-  }
-
-  return {
-    status: 'down',
-    message: data.error || 'Service unhealthy'
-  };
-}`;
+	import type { MonitorWithStatus } from '$lib/types/monitor';
+	import type { ScriptDSL } from '$lib/types/script';
+	import { getDefaultScript, scriptToJson, jsonToScript } from '$lib/types/script';
+	import ScriptBuilder from './ScriptBuilder.svelte';
+	import ScriptEditor from './ScriptEditor.svelte';
 
 	let {
 		monitor = null,
@@ -29,22 +15,102 @@ async function check(ctx) {
 		onCancel: () => void;
 	} = $props();
 
+	// Parse existing script or use default
+	function getInitialScript(): ScriptDSL {
+		if (monitor?.script) {
+			const parsed = jsonToScript(monitor.script);
+			if (parsed) return parsed;
+		}
+		return getDefaultScript();
+	}
+
 	let name = $state(monitor?.name ?? '');
-	let type = $state<MonitorType>(monitor?.type ?? 'http');
-	let url = $state(monitor?.url ?? '');
-	let hostname = $state(monitor?.hostname ?? '');
-	let port = $state(monitor?.port?.toString() ?? '');
-	let method = $state(monitor?.method ?? 'GET');
-	let expectedStatus = $state(monitor?.expected_status?.toString() ?? '200');
-	let keyword = $state(monitor?.keyword ?? '');
-	let keywordType = $state<KeywordType | ''>(monitor?.keyword_type ?? '');
 	let intervalSeconds = $state(monitor?.interval_seconds?.toString() ?? '60');
 	let timeoutMs = $state(monitor?.timeout_ms?.toString() ?? '30000');
 	let active = $state(monitor?.active !== 0);
-	let script = $state(monitor?.script ?? defaultScript);
+
+	let mode = $state<'ui' | 'code'>('ui');
+	let script = $state<ScriptDSL>(getInitialScript());
+	let code = $state(monitor?.script ?? scriptToJson(getDefaultScript()));
+	let codeError = $state('');
+	let isScriptValid = $state(true);
 
 	let isSubmitting = $state(false);
 	let error = $state('');
+
+	function switchToCode() {
+		code = scriptToJson(script);
+		codeError = '';
+		mode = 'code';
+	}
+
+	function switchToUi() {
+		if (codeError) {
+			error = 'Cannot switch to UI mode: fix JSON errors first';
+			return;
+		}
+		const parsed = jsonToScript(code);
+		if (!parsed) {
+			error = 'Cannot switch to UI mode: invalid script structure';
+			return;
+		}
+		script = parsed;
+		error = '';
+		mode = 'ui';
+	}
+
+	function handleCodeValidChange(valid: boolean, parsedScript: ScriptDSL | null) {
+		isScriptValid = valid;
+		if (valid && parsedScript) {
+			codeError = '';
+		}
+	}
+
+	function handleUiValidChange(valid: boolean) {
+		isScriptValid = valid;
+	}
+
+	function openClaudeHelp() {
+		const prompt = `I need help creating a health check script for Pingflare monitoring. Please generate a JSON DSL script based on my requirements.
+
+The DSL format is:
+{
+  "steps": [
+    {
+      "name": "step_name",
+      "request": {
+        "method": "GET|POST|PUT|DELETE|PATCH|HEAD",
+        "url": "https://example.com/api",
+        "headers": { "Authorization": "Bearer token" },
+        "body": { "key": "value" }
+      },
+      "extract": { "varName": "json.path.to.value" },
+      "assert": [
+        { "check": "status", "equals": 200 },
+        { "check": "json.field", "contains": "expected" }
+      ]
+    }
+  ]
+}
+
+Available assertions:
+- equals, notEquals: exact match
+- contains, notContains: substring match
+- matches: regex pattern
+- greaterThan, lessThan, greaterOrEqual, lessOrEqual: numeric comparison
+- exists: true/false for field existence
+- hasKey: check if object has key
+- hasLength, minLength, maxLength: array/string length
+
+Path notation: status, body, json.field, json.array[0].field, headers.content-type
+
+Variables: Extract with "extract": {"token": "json.access_token"}, use with \${token} in URLs/headers/body.
+
+Requirement:
+`;
+
+		window.open(`https://claude.ai/new?q=${encodeURIComponent(prompt)}`, '_blank');
+	}
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -55,42 +121,42 @@ async function check(ctx) {
 			return;
 		}
 
-		if (type === 'http' && !url.trim()) {
-			error = 'URL is required for HTTP monitors';
-			return;
-		}
-
-		if (type === 'tcp' && (!hostname.trim() || !port.trim())) {
-			error = 'Hostname and port are required for TCP monitors';
-			return;
-		}
-
-		if (type === 'script' && !script.trim()) {
-			error = 'Script is required for Script monitors';
-			return;
-		}
-
-		if (type === 'script' && !script.includes('function check')) {
-			error = 'Script must define a check(ctx) function';
-			return;
+		// Get the final script JSON
+		let finalScript: string;
+		if (mode === 'ui') {
+			// Validate UI script
+			if (script.steps.length === 0) {
+				error = 'At least one step is required';
+				return;
+			}
+			for (const step of script.steps) {
+				if (!step.name) {
+					error = 'All steps must have a name';
+					return;
+				}
+				if (!step.request.url) {
+					error = `Step "${step.name}" must have a URL`;
+					return;
+				}
+			}
+			finalScript = scriptToJson(script);
+		} else {
+			// Validate code
+			if (codeError) {
+				error = codeError;
+				return;
+			}
+			finalScript = code;
 		}
 
 		isSubmitting = true;
 
 		const formData = new FormData();
 		formData.set('name', name.trim());
-		formData.set('type', type);
-		formData.set('url', url.trim());
-		formData.set('hostname', hostname.trim());
-		formData.set('port', port);
-		formData.set('method', method);
-		formData.set('expected_status', expectedStatus);
-		formData.set('keyword', keyword.trim());
-		formData.set('keyword_type', keywordType);
+		formData.set('script', finalScript);
 		formData.set('interval_seconds', intervalSeconds);
 		formData.set('timeout_ms', timeoutMs);
 		formData.set('active', active ? '1' : '0');
-		formData.set('script', type === 'script' ? script : '');
 
 		if (monitor?.id) {
 			formData.set('id', monitor.id);
@@ -104,6 +170,8 @@ async function check(ctx) {
 			isSubmitting = false;
 		}
 	}
+
+	let canSave = $derived(name.trim() && isScriptValid && !codeError);
 </script>
 
 <form onsubmit={handleSubmit} class="space-y-4">
@@ -112,153 +180,69 @@ async function check(ctx) {
 	{/if}
 
 	<div>
-		<label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+		<label for="name" class="block text-sm font-medium text-gray-700">Monitor Name</label>
 		<input
 			type="text"
 			id="name"
 			bind:value={name}
 			class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-			placeholder="My Website"
+			placeholder="My API Health Check"
 		/>
 	</div>
 
-	<div>
-		<label for="type" class="block text-sm font-medium text-gray-700">Type</label>
-		<select
-			id="type"
-			bind:value={type}
-			class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-		>
-			<option value="http">HTTP/HTTPS</option>
-			<option value="script">Script (JavaScript)</option>
-			<option value="tcp">TCP</option>
-			<option value="dns" disabled>DNS (coming soon)</option>
-			<option value="push" disabled>Push (coming soon)</option>
-		</select>
+	<div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+		<div class="mb-4 flex items-center justify-between">
+			<div class="flex items-center gap-3">
+				<span class="text-sm font-medium text-gray-700">Health Check Script</span>
+				<button
+					type="button"
+					onclick={openClaudeHelp}
+					class="inline-flex items-center gap-1 rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700 hover:bg-orange-200 transition-colors"
+				>
+					<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+						<path
+							d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
+						/>
+					</svg>
+					Ask Claude
+				</button>
+			</div>
+			<div class="flex rounded-lg bg-gray-200 p-1">
+				<button
+					type="button"
+					onclick={switchToUi}
+					disabled={mode === 'ui'}
+					class="rounded-md px-3 py-1 text-sm font-medium transition-colors {mode === 'ui'
+						? 'bg-white text-gray-900 shadow-sm'
+						: 'text-gray-600 hover:text-gray-900'} disabled:cursor-not-allowed"
+				>
+					Visual Builder
+				</button>
+				<button
+					type="button"
+					onclick={switchToCode}
+					disabled={mode === 'code'}
+					class="rounded-md px-3 py-1 text-sm font-medium transition-colors {mode === 'code'
+						? 'bg-white text-gray-900 shadow-sm'
+						: 'text-gray-600 hover:text-gray-900'} disabled:cursor-not-allowed"
+				>
+					Code
+				</button>
+			</div>
+		</div>
+
+		{#if mode === 'ui'}
+			<ScriptBuilder bind:script onValidChange={handleUiValidChange} />
+		{:else}
+			<ScriptEditor bind:code bind:error={codeError} onValidChange={handleCodeValidChange} />
+		{/if}
 	</div>
-
-	{#if type === 'http'}
-		<div>
-			<label for="url" class="block text-sm font-medium text-gray-700">URL</label>
-			<input
-				type="url"
-				id="url"
-				bind:value={url}
-				class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-				placeholder="https://example.com"
-			/>
-		</div>
-
-		<div class="grid grid-cols-2 gap-4">
-			<div>
-				<label for="method" class="block text-sm font-medium text-gray-700">Method</label>
-				<select
-					id="method"
-					bind:value={method}
-					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-				>
-					<option value="GET">GET</option>
-					<option value="POST">POST</option>
-					<option value="HEAD">HEAD</option>
-					<option value="OPTIONS">OPTIONS</option>
-				</select>
-			</div>
-			<div>
-				<label for="expectedStatus" class="block text-sm font-medium text-gray-700"
-					>Expected Status</label
-				>
-				<input
-					type="number"
-					id="expectedStatus"
-					bind:value={expectedStatus}
-					min="100"
-					max="599"
-					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-				/>
-			</div>
-		</div>
-
-		<div class="grid grid-cols-2 gap-4">
-			<div>
-				<label for="keyword" class="block text-sm font-medium text-gray-700"
-					>Keyword (optional)</label
-				>
-				<input
-					type="text"
-					id="keyword"
-					bind:value={keyword}
-					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-					placeholder="Search text"
-				/>
-			</div>
-			<div>
-				<label for="keywordType" class="block text-sm font-medium text-gray-700">Keyword Type</label
-				>
-				<select
-					id="keywordType"
-					bind:value={keywordType}
-					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-				>
-					<option value="">None</option>
-					<option value="present">Must be present</option>
-					<option value="absent">Must be absent</option>
-				</select>
-			</div>
-		</div>
-	{/if}
-
-	{#if type === 'script'}
-		<div>
-			<label for="script" class="block text-sm font-medium text-gray-700">
-				Health Check Script
-			</label>
-			<p class="mb-2 text-xs text-gray-500">
-				Write JavaScript to check health. Use <code class="bg-gray-100 px-1">ctx.fetch()</code> for
-				HTTP requests. Return
-				<code class="bg-gray-100 px-1">{`{ status: 'up' | 'down' | 'degraded' }`}</code>.
-			</p>
-			<textarea
-				id="script"
-				bind:value={script}
-				rows="12"
-				class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-				placeholder={defaultScript}
-			></textarea>
-		</div>
-	{/if}
-
-	{#if type === 'tcp'}
-		<div class="grid grid-cols-2 gap-4">
-			<div>
-				<label for="hostname" class="block text-sm font-medium text-gray-700">Hostname</label>
-				<input
-					type="text"
-					id="hostname"
-					bind:value={hostname}
-					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-					placeholder="example.com"
-				/>
-			</div>
-			<div>
-				<label for="port" class="block text-sm font-medium text-gray-700">Port</label>
-				<input
-					type="number"
-					id="port"
-					bind:value={port}
-					min="1"
-					max="65535"
-					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-					placeholder="443"
-				/>
-			</div>
-		</div>
-	{/if}
 
 	<div class="grid grid-cols-2 gap-4">
 		<div>
-			<label for="intervalSeconds" class="block text-sm font-medium text-gray-700"
-				>Check Interval (seconds)</label
-			>
+			<label for="intervalSeconds" class="block text-sm font-medium text-gray-700">
+				Check Interval (seconds)
+			</label>
 			<input
 				type="number"
 				id="intervalSeconds"
@@ -301,8 +285,8 @@ async function check(ctx) {
 		</button>
 		<button
 			type="submit"
-			disabled={isSubmitting}
-			class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+			disabled={isSubmitting || !canSave}
+			class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
 		>
 			{isSubmitting ? 'Saving...' : monitor ? 'Update' : 'Create'} Monitor
 		</button>

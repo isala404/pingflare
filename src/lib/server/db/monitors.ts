@@ -28,24 +28,16 @@ export async function createMonitor(db: D1Database, input: CreateMonitorInput): 
 	await db
 		.prepare(
 			`INSERT INTO monitors (id, name, type, url, hostname, port, method, expected_status, keyword, keyword_type, interval_seconds, timeout_ms, retry_count, active, script, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, 'script', NULL, NULL, NULL, 'GET', 200, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.bind(
 			id,
 			input.name,
-			input.type,
-			input.url ?? null,
-			input.hostname ?? null,
-			input.port ?? null,
-			input.method ?? 'GET',
-			input.expected_status ?? 200,
-			input.keyword ?? null,
-			input.keyword_type ?? null,
 			input.interval_seconds ?? 60,
 			input.timeout_ms ?? 30000,
 			input.retry_count ?? 3,
 			input.active !== false ? 1 : 0,
-			input.script ?? null,
+			input.script,
 			now,
 			now
 		)
@@ -76,37 +68,9 @@ export async function updateMonitor(
 		updates.push('name = ?');
 		values.push(input.name);
 	}
-	if (input.type !== undefined) {
-		updates.push('type = ?');
-		values.push(input.type);
-	}
-	if (input.url !== undefined) {
-		updates.push('url = ?');
-		values.push(input.url);
-	}
-	if (input.hostname !== undefined) {
-		updates.push('hostname = ?');
-		values.push(input.hostname);
-	}
-	if (input.port !== undefined) {
-		updates.push('port = ?');
-		values.push(input.port);
-	}
-	if (input.method !== undefined) {
-		updates.push('method = ?');
-		values.push(input.method);
-	}
-	if (input.expected_status !== undefined) {
-		updates.push('expected_status = ?');
-		values.push(input.expected_status);
-	}
-	if (input.keyword !== undefined) {
-		updates.push('keyword = ?');
-		values.push(input.keyword);
-	}
-	if (input.keyword_type !== undefined) {
-		updates.push('keyword_type = ?');
-		values.push(input.keyword_type);
+	if (input.script !== undefined) {
+		updates.push('script = ?');
+		values.push(input.script);
 	}
 	if (input.interval_seconds !== undefined) {
 		updates.push('interval_seconds = ?');
@@ -123,10 +87,6 @@ export async function updateMonitor(
 	if (input.active !== undefined) {
 		updates.push('active = ?');
 		values.push(input.active ? 1 : 0);
-	}
-	if (input.script !== undefined) {
-		updates.push('script = ?');
-		values.push(input.script);
 	}
 
 	updates.push('updated_at = ?');

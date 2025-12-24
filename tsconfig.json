@@ -12,5 +12,6 @@
 		"strict": true,
 		"moduleResolution": "bundler",
 		"types": ["@cloudflare/workers-types"]
-	}
+	},
+	"exclude": ["**/*.test.ts", "**/*.test.js"]
 }

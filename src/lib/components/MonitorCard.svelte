@@ -1,14 +1,14 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { MonitorWithStatus } from '$lib/types/monitor';
+	import { jsonToScript } from '$lib/types/script';
 	import StatusBadge from './StatusBadge.svelte';
 
 	let {
 		monitor,
-		onEdit,
 		onDelete
 	}: {
 		monitor: MonitorWithStatus;
-		onEdit: (monitor: MonitorWithStatus) => void;
 		onDelete: (id: string) => void;
 	} = $props();
 
@@ -23,6 +23,16 @@
 		if (ms < 1000) return `${ms}ms`;
 		return `${(ms / 1000).toFixed(2)}s`;
 	}
+
+	function getScriptInfo(script: string | null): { stepCount: number; firstUrl: string } {
+		if (!script) return { stepCount: 0, firstUrl: '' };
+		const parsed = jsonToScript(script);
+		if (!parsed) return { stepCount: 0, firstUrl: '' };
+		const firstUrl = parsed.steps[0]?.request?.url ?? '';
+		return { stepCount: parsed.steps.length, firstUrl };
+	}
+
+	let scriptInfo = $derived(getScriptInfo(monitor.script));
 </script>
 
 <div
@@ -35,13 +45,16 @@
 				<StatusBadge status={monitor.current_status} />
 			</div>
 			<p class="mt-1 text-sm text-gray-500">
-				{monitor.type.toUpperCase()} &middot;
-				{monitor.url || `${monitor.hostname}:${monitor.port}`}
+				{scriptInfo.stepCount} step{scriptInfo.stepCount !== 1 ? 's' : ''}
+				{#if scriptInfo.firstUrl}
+					<span class="mx-1">&middot;</span>
+					<span class="max-w-xs truncate inline-block align-bottom">{scriptInfo.firstUrl}</span>
+				{/if}
 			</p>
 		</div>
 		<div class="flex gap-2">
-			<button
-				onclick={() => onEdit(monitor)}
+			<a
+				href={resolve(`/monitors/${monitor.id}/edit`)}
 				class="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
 				title="Edit monitor"
 			>
@@ -53,7 +66,7 @@
 						d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
 					/>
 				</svg>
-			</button>
+			</a>
 			<button
 				onclick={() => onDelete(monitor.id)}
 				class="rounded-md p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"

@@ -1,20 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import type { MonitorWithStatus, CreateMonitorInput } from '$lib/types/monitor';
+	import type { MonitorWithStatus } from '$lib/types/monitor';
 	import type { PageData } from './$types';
 	import MonitorCard from '$lib/components/MonitorCard.svelte';
-	import MonitorForm from '$lib/components/MonitorForm.svelte';
-	import Modal from '$lib/components/Modal.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	let monitors = $state<MonitorWithStatus[]>([]);
 	let loading = $state(true);
 	let error = $state('');
-
-	let showModal = $state(false);
-	let editingMonitor = $state<MonitorWithStatus | null>(null);
 
 	let refreshInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -33,50 +28,6 @@
 		}
 	}
 
-	async function handleSave(formData: FormData) {
-		const id = formData.get('id');
-		const data: CreateMonitorInput = {
-			name: formData.get('name') as string,
-			type: formData.get('type') as CreateMonitorInput['type'],
-			url: (formData.get('url') as string) || undefined,
-			hostname: (formData.get('hostname') as string) || undefined,
-			port: formData.get('port') ? parseInt(formData.get('port') as string, 10) : undefined,
-			method: (formData.get('method') as string) || undefined,
-			expected_status: formData.get('expected_status')
-				? parseInt(formData.get('expected_status') as string, 10)
-				: undefined,
-			keyword: (formData.get('keyword') as string) || undefined,
-			keyword_type:
-				(formData.get('keyword_type') as CreateMonitorInput['keyword_type']) || undefined,
-			interval_seconds: formData.get('interval_seconds')
-				? parseInt(formData.get('interval_seconds') as string, 10)
-				: undefined,
-			timeout_ms: formData.get('timeout_ms')
-				? parseInt(formData.get('timeout_ms') as string, 10)
-				: undefined,
-			active: formData.get('active') === '1',
-			script: (formData.get('script') as string) || undefined
-		};
-
-		const url = id ? `/api/monitors/${id}` : '/api/monitors';
-		const method = id ? 'PUT' : 'POST';
-
-		const response = await fetch(url, {
-			method,
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(data)
-		});
-
-		if (!response.ok) {
-			const errData = (await response.json()) as { error?: string };
-			throw new Error(errData.error || 'Failed to save monitor');
-		}
-
-		showModal = false;
-		editingMonitor = null;
-		await loadMonitors();
-	}
-
 	async function handleDelete(id: string) {
 		if (!confirm('Are you sure you want to delete this monitor?')) {
 			return;
@@ -91,21 +42,6 @@
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to delete monitor';
 		}
-	}
-
-	function openCreateModal() {
-		editingMonitor = null;
-		showModal = true;
-	}
-
-	function openEditModal(monitor: MonitorWithStatus) {
-		editingMonitor = monitor;
-		showModal = true;
-	}
-
-	function closeModal() {
-		showModal = false;
-		editingMonitor = null;
 	}
 
 	async function runChecksNow() {
@@ -162,12 +98,12 @@
 				>
 					Run Checks Now
 				</button>
-				<button
-					onclick={openCreateModal}
+				<a
+					href={resolve('/monitors/new')}
 					class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
 				>
 					Add Monitor
-				</button>
+				</a>
 				<div class="ml-2 flex items-center gap-2 border-l border-gray-200 pl-4">
 					<a href={resolve('/settings')} class="text-sm text-gray-600 hover:text-gray-900">
 						{data.user?.name}
@@ -227,27 +163,19 @@
 				</svg>
 				<h3 class="mt-4 text-lg font-medium text-gray-900">No monitors yet</h3>
 				<p class="mt-2 text-gray-500">Get started by adding your first monitor.</p>
-				<button
-					onclick={openCreateModal}
-					class="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+				<a
+					href={resolve('/monitors/new')}
+					class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
 				>
 					Add Monitor
-				</button>
+				</a>
 			</div>
 		{:else}
 			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 				{#each monitors as monitor (monitor.id)}
-					<MonitorCard {monitor} onEdit={openEditModal} onDelete={handleDelete} />
+					<MonitorCard {monitor} onDelete={handleDelete} />
 				{/each}
 			</div>
 		{/if}
 	</main>
 </div>
-
-<Modal
-	open={showModal}
-	title={editingMonitor ? 'Edit Monitor' : 'Add Monitor'}
-	onClose={closeModal}
->
-	<MonitorForm monitor={editingMonitor} onSave={handleSave} onCancel={closeModal} />
-</Modal>

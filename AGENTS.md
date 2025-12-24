@@ -32,6 +32,7 @@ This workflow applies to every new feature, bug fix, or significant code modific
 At the start of every task, determine whether `PLAN.md` is needed:
 
 **Skip `PLAN.md` for simple tasks:**
+
 - Single file changes
 - Fewer than ~50 lines of code
 - Clear, unambiguous requirements
@@ -41,6 +42,7 @@ At the start of every task, determine whether `PLAN.md` is needed:
 For simple tasks, keep a mental todo list and proceed directly to implementation.
 
 **Create `PLAN.md` for complex tasks:**
+
 - Multiple files affected
 - Architectural or design decisions required
 - Ambiguous requirements needing clarification
@@ -56,6 +58,7 @@ For simple tasks, keep a mental todo list and proceed directly to implementation
 3. **Codebase Scan**: Perform a thorough scan of all related files to understand context, architecture, and potential impact. Update `MEMORIES.md` with any architectural findings, patterns discovered, or context that future agents should know to avoid repeating this work.
 
 4. **Create `PLAN.md`** (if needed): Create a temporary `PLAN.md` file in the root directory:
+
 ```
    # PLAN: [Brief Description of Task]
 
@@ -96,10 +99,10 @@ For simple tasks, keep a mental todo list and proceed directly to implementation
 4. **Cleanup**: Delete `PLAN.md` (if created).
 5. **Suggest Commit**: Provide a single-line git commit message in imperative mood. Do not run the commit.
 
-
 ## PROGRESS.md Format
 
 Purpose: High-level project evolution log. One entry per completed task. Enables any reader to understand what changed and why over time.
+
 ```
 Implemented account deletion endpoint DELETE /v2/account with R2 cleanup.
 - Added `delete_all_user_files` to `src/services/storage.rs` for batch R2 deletion using ListObjectsV2/DeleteObjects.
@@ -119,6 +122,7 @@ Fixed race condition in session refresh logic.
 ```
 
 Rules:
+
 - Single sentence task summary in imperative mood, include endpoint/feature name
 - Bullet points for file changes: `path/to/file.ext` with brief description of change
 - Flags (TODO/ISSUE/WORKAROUND/TRADEOFF/DEPRECATED) only when applicable, always include resolution path
@@ -128,6 +132,7 @@ Rules:
 ## MEMORIES.md Format
 
 Purpose: Long-term memory for stack info, user preferences, project patterns, and domain context. Survives across all sessions.
+
 ```
 Tooling
 - Stack: TypeScript, Express, Jest, ESLint, Prettier
@@ -167,6 +172,7 @@ Miscellaneous
 ```
 
 Rules:
+
 - No headers, group related items with empty lines
 - Bullet points or single lines only, no prose
 - Update incrementally, do not rewrite entire file
@@ -185,6 +191,7 @@ Write code that is trivial to unit test in isolation. The agent writes **only un
 - **Use interfaces/traits/protocols**: Depend on abstractions, not concrete implementations.
 - **Pure functions over stateful methods**: Given the same input, return the same output. No side effects.
 - **Isolate I/O at the edges**: Business logic should be pure. Push file, network, and database calls to the outer layer.
+
 ```
 // Bad: Untestable—creates its own dependency
 class OrderService {
@@ -206,6 +213,7 @@ class OrderService {
 2. Write Idiomatic Code
 
 Leverage the language's type system, standard library, and common patterns. Code should look like it belongs in the ecosystem.
+
 ```
 // Bad: C-style loop, manual indexing (in a language with iterators)
 function findUser(users, name) {
@@ -222,6 +230,7 @@ function findUser(users, name) {
   return users.find(user => user.name === name) ?? null
 }
 ```
+
 ```rust
 // Bad: Manual iteration in Rust
 fn find_user<'a>(users: &'a [User], name: &str) -> Option<&'a User> {
@@ -244,6 +253,7 @@ fn find_user<'a>(users: &'a [User], name: &str) -> Option<&'a User> {
 Favor simple, robust code over clever solutions. Prioritize straightforward logic that handles all cases uniformly, eliminating special-case handling which is a common source of bugs.
 
 **Eliminate edge cases through design, not patches.** When encountering a bug or edge case, do not immediately fix the symptom. Instead:
+
 1. Zoom out and understand why the problem exists
 2. Identify the architectural flaw that allowed it
 3. Redesign so the problem becomes impossible
@@ -254,13 +264,13 @@ This applies to all layers—UI glitches, backend errors, data inconsistencies. 
 // Bad: Complex, with special-casing for head node
 function removeFromList(list, value) {
   if (!list.head) return
-  
+
   // Special case: head is the node to remove
   if (list.head.value === value) {
     list.head = list.head.next
     return
   }
-  
+
   // General case: find and remove
   let prev = list.head
   while (prev.next) {
@@ -276,7 +286,7 @@ function removeFromList(list, value) {
 function removeFromList(list, value) {
   let cursor = { next: list.head }  // Virtual node before head
   const dummy = cursor
-  
+
   while (cursor.next) {
     if (cursor.next.value === value) {
       cursor.next = cursor.next.next
@@ -284,7 +294,7 @@ function removeFromList(list, value) {
     }
     cursor = cursor.next
   }
-  
+
   list.head = dummy.next
 }
 ```
@@ -308,6 +318,7 @@ Each function, class, or module should do exactly one thing. If you need the wor
 5. Fail Fast and Explicitly
 
 Validate inputs at boundaries. Return errors, don't throw exceptions for expected failures. Make invalid states unrepresentable through types.
+
 ```
 // Bad: Silent failure
 function getUser(id) {
@@ -364,24 +375,25 @@ Use structured logging with appropriate levels for observability. Include contex
 - `warn`: Potential issues or handled transient errors
 - `info`: Significant lifecycle events (startup, shutdown, request completed)
 - `debug`: Detailed diagnostic information for troubleshooting
+
 ```
 // Bad: Unstructured, hard to query
 console.log(`User ${userId} failed to login: ${error.message}`)
 
 // Good: Structured with context
-logger.warn("login failed", { 
-  userId, 
+logger.warn("login failed", {
+  userId,
   reason: error.code,
-  attempt: attemptCount 
+  attempt: attemptCount
 })
 ```
-
 
 ## Comments & Documentation
 
 1. **Explain the why, not the what.** Code shows what. Comments show why.
 2. **Delete commented-out code.** Use version control instead.
 3. **Document public APIs.** Internal implementation needs fewer comments if code is clear.
+
 ```
 // ✅ Good: Explains non-obvious reasoning
 // Using insertion sort here because n < 10 in practice and it's faster for small arrays
@@ -392,18 +404,22 @@ for user in users { }
 ```
 
 ## Execution & Commands
+
 DO NOT RUN, any commands which would do irreversible changes to the host system like,
+
 - Install/Updating/Uninstalling system level packages
 - Changing system level configurations
-You are encouraged, use tools (kubectl, git, gh, curl, ls, docker, etc.) as much as needed in READ ONLY to gather information.
+  You are encouraged, use tools (kubectl, git, gh, curl, ls, docker, etc.) as much as needed in READ ONLY to gather information.
 
 ## Summary
 
-| Phase | Actions |
-|-------|---------|
-| **Assess** | Determine if `PLAN.md` is needed based on task complexity |
-| **Plan** | Read memory → Detect stack if needed → Understand task → Scan codebase → Update memory → Create `PLAN.md` (if needed) → Get approval |
-| **Execute** | Implement step-by-step → Verify each step → Keep changes surgical |
-| **Code** | Testable → Idiomatic → Good taste → Small functions → Explicit |
-| **Test** | Unit tests only → Mock dependencies → Test behavior not implementation |
-| **Finalize** | Get approval → Update `MEMORIES.md` → Update `PROGRESS.md` → Delete `PLAN.md` → Suggest commit message |
+| Phase        | Actions                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Assess**   | Determine if `PLAN.md` is needed based on task complexity                                                                            |
+| **Plan**     | Read memory → Detect stack if needed → Understand task → Scan codebase → Update memory → Create `PLAN.md` (if needed) → Get approval |
+| **Execute**  | Implement step-by-step → Verify each step → Keep changes surgical                                                                    |
+| **Code**     | Testable → Idiomatic → Good taste → Small functions → Explicit                                                                       |
+| **Test**     | Unit tests only → Mock dependencies → Test behavior not implementation                                                               |
+| **Finalize** | Get approval → Update `MEMORIES.md` → Update `PROGRESS.md` → Delete `PLAN.md` → Suggest commit message                               |
+
+www

@@ -1,4 +1,5 @@
 import type { MonitorStatus } from '$lib/types/monitor';
+import type { ScriptStep, Assertion, ScriptDSL } from '$lib/types/script';
 
 export interface ScriptCheckResult {
 	status: MonitorStatus;
@@ -7,235 +8,581 @@ export interface ScriptCheckResult {
 	errorMessage: string | null;
 }
 
-export interface ScriptContext {
-	fetch: typeof fetch;
-	log: (...args: unknown[]) => void;
-	setTimeout: typeof setTimeout;
-}
-
-export interface ScriptResult {
-	status: 'up' | 'down' | 'degraded';
-	message?: string;
-	responseTime?: number;
-	statusCode?: number;
+interface StepResult {
+	name: string;
+	status: number;
+	responseTimeMs: number;
+	body: string;
+	json: unknown;
+	headers: Record<string, string>;
+	error: string | null;
+	assertions: { passed: boolean; message: string }[];
 }
 
 /**
- * Executes a user-provided health check script in a sandboxed environment.
+ * Pingflare Health Check DSL
  *
- * The script receives a context object with:
- * - fetch: Make HTTP requests
- * - log: Log messages (captured for debugging)
+ * A simple JSON-based language for complex health checks.
  *
- * The script must return an object with:
- * - status: 'up' | 'down' | 'degraded'
- * - message?: string (optional error/info message)
- * - responseTime?: number (optional, in ms)
- * - statusCode?: number (optional HTTP status code)
+ * Features:
+ * - Chain multiple HTTP requests (GET, POST, PUT, DELETE, PATCH)
+ * - Extract values from responses using dot notation
+ * - Use variables in URLs, headers, and body with ${varName}
+ * - Assert response values with various operators
  *
- * Example script:
- * ```javascript
- * async function check(ctx) {
- *   const response = await ctx.fetch('https://api.example.com/health');
- *   const data = await response.json();
- *
- *   if (data.status === 'healthy' && data.dbConnected) {
- *     return { status: 'up' };
- *   }
- *
- *   if (data.status === 'degraded') {
- *     return { status: 'degraded', message: 'Service is degraded' };
- *   }
- *
- *   return { status: 'down', message: data.error || 'Service unhealthy' };
+ * Example:
+ * {
+ *   "steps": [
+ *     {
+ *       "name": "login",
+ *       "request": {
+ *         "method": "POST",
+ *         "url": "https://api.example.com/login",
+ *         "body": { "user": "test" }
+ *       },
+ *       "extract": { "token": "json.token" }
+ *     },
+ *     {
+ *       "name": "get_data",
+ *       "request": {
+ *         "method": "GET",
+ *         "url": "https://api.example.com/data",
+ *         "headers": { "Authorization": "Bearer ${token}" }
+ *       },
+ *       "assert": [
+ *         { "check": "status", "equals": 200 },
+ *         { "check": "json.items.length", "greaterThan": 0 }
+ *       ]
+ *     }
+ *   ]
  * }
- * ```
  */
 export async function executeScript(
 	script: string,
 	timeoutMs: number = 30000
 ): Promise<ScriptCheckResult> {
 	const startTime = performance.now();
-	const logs: string[] = [];
-
-	// Create sandboxed context
-	const context: ScriptContext = {
-		fetch: createSandboxedFetch(timeoutMs),
-		log: (...args: unknown[]) => {
-			logs.push(args.map((a) => String(a)).join(' '));
-		},
-		setTimeout: setTimeout
-	};
 
 	try {
-		// Validate script has required structure
-		if (!script || typeof script !== 'string') {
-			throw new Error('Script must be a non-empty string');
+		// Parse the DSL
+		const dsl = parseScript(script);
+
+		// Execute steps
+		const variables: Record<string, unknown> = {};
+		const results: StepResult[] = [];
+		let lastStatusCode: number | null = null;
+		let allAssertionsPassed = true;
+		let anyRequestFailed = false;
+
+		for (const step of dsl.steps) {
+			const result = await executeStep(step, variables, timeoutMs);
+			results.push(result);
+			lastStatusCode = result.status;
+
+			if (result.error) {
+				anyRequestFailed = true;
+				break;
+			}
+
+			// Check assertions
+			for (const assertion of result.assertions) {
+				if (!assertion.passed) {
+					allAssertionsPassed = false;
+				}
+			}
+
+			// Extract variables for next steps
+			if (step.extract && result.json) {
+				for (const [varName, path] of Object.entries(step.extract)) {
+					variables[varName] = extractValue(result, path);
+				}
+			}
 		}
 
-		// Execute with timeout
-		const result = await executeWithTimeout(
-			async () => {
-				return await runSandboxedScript(script, context);
-			},
-			timeoutMs,
-			'Script execution timed out'
-		);
-
-		// Validate result
-		const validatedResult = validateScriptResult(result);
-
 		const endTime = performance.now();
-		const responseTimeMs = validatedResult.responseTime ?? Math.round(endTime - startTime);
+		const responseTimeMs = Math.round(endTime - startTime);
+
+		// Determine final status
+		if (anyRequestFailed) {
+			const failedStep = results.find((r) => r.error);
+			return {
+				status: 'down',
+				responseTimeMs,
+				statusCode: lastStatusCode,
+				errorMessage: `Step "${failedStep?.name}" failed: ${failedStep?.error}`
+			};
+		}
+
+		if (!allAssertionsPassed) {
+			const failedByStep = results
+				.filter((r) => r.assertions.some((a) => !a.passed))
+				.map((r) => ({
+					step: r.name,
+					failures: r.assertions.filter((a) => !a.passed).map((a) => a.message)
+				}));
+
+			const totalFailures = failedByStep.reduce((sum, s) => sum + s.failures.length, 0);
+			const stepsWithFailures = failedByStep.length;
+
+			// Build concise error message
+			let errorMessage = `${totalFailures} assertion${totalFailures !== 1 ? 's' : ''} failed`;
+			if (stepsWithFailures > 1) {
+				errorMessage += ` in ${stepsWithFailures} steps`;
+			}
+
+			// Show first 2 failures as examples
+			const examples: string[] = [];
+			for (const step of failedByStep) {
+				for (const failure of step.failures) {
+					if (examples.length < 2) {
+						examples.push(`${step.step}: ${failure}`);
+					}
+				}
+				if (examples.length >= 2) break;
+			}
+
+			if (examples.length > 0) {
+				errorMessage += `: ${examples.join('; ')}`;
+				const remaining = totalFailures - examples.length;
+				if (remaining > 0) {
+					errorMessage += ` (+${remaining} more)`;
+				}
+			}
+
+			return {
+				status: 'degraded',
+				responseTimeMs,
+				statusCode: lastStatusCode,
+				errorMessage
+			};
+		}
 
 		return {
-			status: validatedResult.status,
+			status: 'up',
 			responseTimeMs,
-			statusCode: validatedResult.statusCode ?? null,
-			errorMessage: validatedResult.message ?? null
+			statusCode: lastStatusCode,
+			errorMessage: null
 		};
 	} catch (err) {
 		const endTime = performance.now();
-		const errorMessage = err instanceof Error ? err.message : 'Unknown script error';
-
 		return {
 			status: 'down',
 			responseTimeMs: Math.round(endTime - startTime),
 			statusCode: null,
-			errorMessage: `Script error: ${errorMessage}${logs.length > 0 ? ` | Logs: ${logs.join('; ')}` : ''}`
+			errorMessage: `Script error: ${err instanceof Error ? err.message : 'Unknown error'}`
 		};
 	}
 }
 
-/**
- * Runs the user script in a sandboxed environment using Function constructor.
- * The script is wrapped to only expose the context object.
- */
-async function runSandboxedScript(script: string, context: ScriptContext): Promise<unknown> {
-	// Wrap the script in an async function that receives the context
-	const wrappedScript = `
-		return (async function(ctx) {
-			"use strict";
+function parseScript(script: string): ScriptDSL {
+	// Try to parse as JSON DSL
+	const trimmed = script.trim();
 
-			// Extract commonly used functions from context
-			const fetch = ctx.fetch;
-			const log = ctx.log;
-
-			// User script starts here
-			${script}
-			// User script ends here
-
-			// If the script defines a check function, call it
-			if (typeof check === 'function') {
-				return await check(ctx);
-			}
-
-			throw new Error('Script must define a check(ctx) function');
-		})
-	`;
-
-	// Create the function - this is safer than eval because:
-	// 1. We control what's passed in (only ctx)
-	// 2. Strict mode is enabled
-	// 3. The function runs in its own scope
-	const fn = new Function(wrappedScript)();
-
-	// Execute the script with our sandboxed context
-	return await fn(context);
-}
-
-/**
- * Creates a fetch function with timeout that's safe for user scripts
- */
-function createSandboxedFetch(timeoutMs: number): typeof fetch {
-	return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
+	if (trimmed.startsWith('{')) {
 		try {
-			const response = await fetch(input, {
-				...init,
-				signal: controller.signal,
-				headers: {
-					'User-Agent': 'Pingflare/1.0 Script Check',
-					...init?.headers
-				}
-			});
-			return response;
-		} finally {
-			clearTimeout(timeoutId);
+			const parsed = JSON.parse(trimmed);
+			if (parsed.steps && Array.isArray(parsed.steps)) {
+				return parsed as ScriptDSL;
+			}
+		} catch {
+			// Not valid JSON, try legacy format
 		}
-	};
-}
-
-/**
- * Executes a promise with a timeout
- */
-async function executeWithTimeout<T>(
-	fn: () => Promise<T>,
-	timeoutMs: number,
-	timeoutMessage: string
-): Promise<T> {
-	return Promise.race([
-		fn(),
-		new Promise<T>((_, reject) => {
-			setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
-		})
-	]);
-}
-
-/**
- * Validates that the script returned a valid result object
- */
-function validateScriptResult(result: unknown): ScriptResult {
-	if (!result || typeof result !== 'object') {
-		throw new Error('Script must return an object with a status property');
 	}
 
-	const obj = result as Record<string, unknown>;
-
-	if (!obj.status || !['up', 'down', 'degraded'].includes(obj.status as string)) {
-		throw new Error("Script must return an object with status: 'up' | 'down' | 'degraded'");
+	// Legacy format: extract URLs and create simple steps
+	const urls = extractLegacyUrls(script);
+	if (urls.length === 0) {
+		throw new Error('Script must contain valid JSON DSL or at least one fetch() call');
 	}
 
 	return {
-		status: obj.status as ScriptResult['status'],
-		message: typeof obj.message === 'string' ? obj.message : undefined,
-		responseTime: typeof obj.responseTime === 'number' ? obj.responseTime : undefined,
-		statusCode: typeof obj.statusCode === 'number' ? obj.statusCode : undefined
+		steps: urls.map((url, i) => ({
+			name: `request_${i + 1}`,
+			request: { method: 'GET' as const, url }
+		}))
 	};
 }
 
+function extractLegacyUrls(script: string): string[] {
+	const urls: string[] = [];
+	const patterns = [/ctx\.fetch\s*\(\s*['"`]([^'"`]+)['"`]/g, /fetch\s*\(\s*['"`]([^'"`]+)['"`]/g];
+
+	for (const pattern of patterns) {
+		let match;
+		while ((match = pattern.exec(script)) !== null) {
+			if (match[1] && !urls.includes(match[1])) {
+				urls.push(match[1]);
+			}
+		}
+	}
+
+	return urls;
+}
+
+async function executeStep(
+	step: ScriptStep,
+	variables: Record<string, unknown>,
+	timeoutMs: number
+): Promise<StepResult> {
+	const startTime = performance.now();
+
+	try {
+		// Interpolate variables in URL
+		const url = interpolate(step.request.url, variables);
+
+		// Interpolate headers
+		const headers: Record<string, string> = {
+			'User-Agent': 'Pingflare/1.0 Health Check'
+		};
+		if (step.request.headers) {
+			for (const [key, value] of Object.entries(step.request.headers)) {
+				headers[key] = interpolate(value, variables);
+			}
+		}
+
+		// Interpolate body
+		let body: string | undefined;
+		if (step.request.body) {
+			if (typeof step.request.body === 'string') {
+				body = interpolate(step.request.body, variables);
+			} else {
+				body = JSON.stringify(interpolateObject(step.request.body, variables));
+				if (!headers['Content-Type']) {
+					headers['Content-Type'] = 'application/json';
+				}
+			}
+		}
+
+		// Make request
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+		const response = await fetch(url, {
+			method: step.request.method,
+			headers,
+			body,
+			signal: controller.signal
+		});
+
+		clearTimeout(timeoutId);
+
+		const endTime = performance.now();
+		const responseText = await response.text();
+
+		let json: unknown = null;
+		try {
+			json = JSON.parse(responseText);
+		} catch {
+			// Not JSON
+		}
+
+		const responseHeaders: Record<string, string> = {};
+		response.headers.forEach((value, key) => {
+			responseHeaders[key] = value;
+		});
+
+		// Run assertions
+		const assertions: { passed: boolean; message: string }[] = [];
+		if (step.assert) {
+			for (const assertion of step.assert) {
+				const result = runAssertion(assertion, {
+					status: response.status,
+					body: responseText,
+					json,
+					headers: responseHeaders
+				});
+				assertions.push(result);
+			}
+		}
+
+		return {
+			name: step.name,
+			status: response.status,
+			responseTimeMs: Math.round(endTime - startTime),
+			body: responseText,
+			json,
+			headers: responseHeaders,
+			error: null,
+			assertions
+		};
+	} catch (err) {
+		const endTime = performance.now();
+		return {
+			name: step.name,
+			status: 0,
+			responseTimeMs: Math.round(endTime - startTime),
+			body: '',
+			json: null,
+			headers: {},
+			error: err instanceof Error ? err.message : 'Request failed',
+			assertions: []
+		};
+	}
+}
+
+function interpolate(str: string, variables: Record<string, unknown>): string {
+	return str.replace(/\$\{([^}]+)\}/g, (_, varName) => {
+		const value = variables[varName.trim()];
+		return value !== undefined ? String(value) : `\${${varName}}`;
+	});
+}
+
+function interpolateObject(obj: unknown, variables: Record<string, unknown>): unknown {
+	if (typeof obj === 'string') {
+		return interpolate(obj, variables);
+	}
+	if (Array.isArray(obj)) {
+		return obj.map((item) => interpolateObject(item, variables));
+	}
+	if (obj && typeof obj === 'object') {
+		const result: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(obj)) {
+			result[key] = interpolateObject(value, variables);
+		}
+		return result;
+	}
+	return obj;
+}
+
+function extractValue(result: StepResult, path: string): unknown {
+	const parts = path.split('.');
+	let current: unknown = result;
+
+	for (const part of parts) {
+		if (current === null || current === undefined) {
+			return undefined;
+		}
+
+		// Handle array index
+		const arrayMatch = part.match(/^(\w+)\[(\d+)\]$/);
+		if (arrayMatch) {
+			const [, key, index] = arrayMatch;
+			current = (current as Record<string, unknown>)[key];
+			if (Array.isArray(current)) {
+				current = current[parseInt(index, 10)];
+			}
+		} else {
+			current = (current as Record<string, unknown>)[part];
+		}
+	}
+
+	return current;
+}
+
+function runAssertion(
+	assertion: Assertion,
+	context: { status: number; body: string; json: unknown; headers: Record<string, string> }
+): { passed: boolean; message: string } {
+	const value = extractValue(context as unknown as StepResult, assertion.check);
+
+	// equals
+	if (assertion.equals !== undefined) {
+		const passed = value === assertion.equals;
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} equals ${assertion.equals}`
+				: `Expected ${assertion.check} to equal ${assertion.equals}, got ${JSON.stringify(value)}`
+		};
+	}
+
+	// notEquals
+	if (assertion.notEquals !== undefined) {
+		const passed = value !== assertion.notEquals;
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} not equals ${assertion.notEquals}`
+				: `Expected ${assertion.check} to not equal ${assertion.notEquals}`
+		};
+	}
+
+	// contains
+	if (assertion.contains !== undefined) {
+		const strValue = String(value ?? '');
+		const passed = strValue.includes(assertion.contains);
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} contains "${assertion.contains}"`
+				: `Expected ${assertion.check} to contain "${assertion.contains}"`
+		};
+	}
+
+	// notContains
+	if (assertion.notContains !== undefined) {
+		const strValue = String(value ?? '');
+		const passed = !strValue.includes(assertion.notContains);
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} does not contain "${assertion.notContains}"`
+				: `Expected ${assertion.check} to not contain "${assertion.notContains}"`
+		};
+	}
+
+	// matches (regex)
+	if (assertion.matches !== undefined) {
+		const strValue = String(value ?? '');
+		const regex = new RegExp(assertion.matches);
+		const passed = regex.test(strValue);
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} matches /${assertion.matches}/`
+				: `Expected ${assertion.check} to match /${assertion.matches}/`
+		};
+	}
+
+	// greaterThan
+	if (assertion.greaterThan !== undefined) {
+		const numValue = Number(value);
+		const passed = !isNaN(numValue) && numValue > assertion.greaterThan;
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} > ${assertion.greaterThan}`
+				: `Expected ${assertion.check} to be > ${assertion.greaterThan}, got ${value}`
+		};
+	}
+
+	// lessThan
+	if (assertion.lessThan !== undefined) {
+		const numValue = Number(value);
+		const passed = !isNaN(numValue) && numValue < assertion.lessThan;
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} < ${assertion.lessThan}`
+				: `Expected ${assertion.check} to be < ${assertion.lessThan}, got ${value}`
+		};
+	}
+
+	// greaterOrEqual
+	if (assertion.greaterOrEqual !== undefined) {
+		const numValue = Number(value);
+		const passed = !isNaN(numValue) && numValue >= assertion.greaterOrEqual;
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} >= ${assertion.greaterOrEqual}`
+				: `Expected ${assertion.check} to be >= ${assertion.greaterOrEqual}, got ${value}`
+		};
+	}
+
+	// lessOrEqual
+	if (assertion.lessOrEqual !== undefined) {
+		const numValue = Number(value);
+		const passed = !isNaN(numValue) && numValue <= assertion.lessOrEqual;
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} <= ${assertion.lessOrEqual}`
+				: `Expected ${assertion.check} to be <= ${assertion.lessOrEqual}, got ${value}`
+		};
+	}
+
+	// exists
+	if (assertion.exists !== undefined) {
+		const passed = assertion.exists
+			? value !== undefined && value !== null
+			: value === undefined || value === null;
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} ${assertion.exists ? 'exists' : 'does not exist'}`
+				: `Expected ${assertion.check} to ${assertion.exists ? 'exist' : 'not exist'}`
+		};
+	}
+
+	// hasKey
+	if (assertion.hasKey !== undefined) {
+		const passed =
+			value !== null && typeof value === 'object' && assertion.hasKey in (value as object);
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} has key "${assertion.hasKey}"`
+				: `Expected ${assertion.check} to have key "${assertion.hasKey}"`
+		};
+	}
+
+	// hasLength
+	if (assertion.hasLength !== undefined) {
+		const length = Array.isArray(value)
+			? value.length
+			: typeof value === 'string'
+				? value.length
+				: -1;
+		const passed = length === assertion.hasLength;
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} has length ${assertion.hasLength}`
+				: `Expected ${assertion.check} to have length ${assertion.hasLength}, got ${length}`
+		};
+	}
+
+	// minLength
+	if (assertion.minLength !== undefined) {
+		const length = Array.isArray(value)
+			? value.length
+			: typeof value === 'string'
+				? value.length
+				: -1;
+		const passed = length >= assertion.minLength;
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} has length >= ${assertion.minLength}`
+				: `Expected ${assertion.check} to have length >= ${assertion.minLength}, got ${length}`
+		};
+	}
+
+	// maxLength
+	if (assertion.maxLength !== undefined) {
+		const length = Array.isArray(value)
+			? value.length
+			: typeof value === 'string'
+				? value.length
+				: -1;
+		const passed = length <= assertion.maxLength;
+		return {
+			passed,
+			message: passed
+				? `${assertion.check} has length <= ${assertion.maxLength}`
+				: `Expected ${assertion.check} to have length <= ${assertion.maxLength}, got ${length}`
+		};
+	}
+
+	return { passed: true, message: 'No assertion to check' };
+}
+
 /**
- * Validates a script without executing it (basic syntax check)
+ * Validates a script without executing it
  */
 export function validateScript(script: string): { valid: boolean; error?: string } {
 	try {
-		// Try to parse the script as a function body
-		new Function(`
-			return (async function(ctx) {
-				"use strict";
-				${script}
-				if (typeof check === 'function') {
-					return await check(ctx);
-				}
-				throw new Error('Script must define a check(ctx) function');
-			})
-		`);
+		const dsl = parseScript(script);
 
-		// Check if script contains 'check' function definition
-		if (!script.includes('function check') && !script.includes('check =')) {
-			return {
-				valid: false,
-				error: 'Script must define a check(ctx) function'
-			};
+		if (!dsl.steps || dsl.steps.length === 0) {
+			return { valid: false, error: 'Script must have at least one step' };
+		}
+
+		for (const step of dsl.steps) {
+			if (!step.name) {
+				return { valid: false, error: 'Each step must have a name' };
+			}
+			if (!step.request?.url) {
+				return { valid: false, error: `Step "${step.name}" must have a request URL` };
+			}
+			if (!step.request.method) {
+				return { valid: false, error: `Step "${step.name}" must have a request method` };
+			}
 		}
 
 		return { valid: true };
 	} catch (err) {
-		return {
-			valid: false,
-			error: err instanceof Error ? err.message : 'Invalid JavaScript syntax'
-		};
+		return { valid: false, error: err instanceof Error ? err.message : 'Invalid script' };
 	}
 }

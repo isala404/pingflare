@@ -6,7 +6,8 @@ export default {
 	async scheduled(
 		controller: ScheduledController,
 		env: Env,
-		ctx: ExecutionContext
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		_ctx: ExecutionContext
 	): Promise<void> {
 		const url = env.PINGFLARE_URL || 'https://pingflare.pages.dev';
 		const cronEndpoint = `${url}/api/cron`;
@@ -43,14 +44,17 @@ export default {
 			});
 		}
 
-		return new Response(JSON.stringify({
-			name: 'pingflare-scheduler',
-			status: 'running',
-			endpoints: {
-				'/trigger': 'Manually trigger health checks'
+		return new Response(
+			JSON.stringify({
+				name: 'pingflare-scheduler',
+				status: 'running',
+				endpoints: {
+					'/trigger': 'Manually trigger health checks'
+				}
+			}),
+			{
+				headers: { 'Content-Type': 'application/json' }
 			}
-		}), {
-			headers: { 'Content-Type': 'application/json' }
-		});
+		);
 	}
 };
