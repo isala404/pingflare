@@ -12,9 +12,40 @@ This document defines the behavior, coding principles, and workflow rules for th
 
 ---
 
+## Human Authorship Standard
+
+All agent output must appear as if authored by a human developer. A third-party reviewer should not be able to distinguish agent work from human work.
+
+- **Commit messages**: No AI attribution, co-authorship tags, or generated-by footers
+- **PR descriptions**: Write naturally, no "As an AI" or similar phrases
+- **Code comments**: No references to being generated or assisted by AI
+- **Documentation**: Match the project's existing voice and style
+
+---
+
 ## Task Workflow: Plan-Driven Development
 
-This workflow is mandatory for every new feature, bug fix, or significant code modification.
+This workflow applies to every new feature, bug fix, or significant code modification.
+
+### Phase 0: Assess Complexity
+
+At the start of every task, determine whether `PLAN.md` is needed:
+
+**Skip `PLAN.md` for simple tasks:**
+- Single file changes
+- Fewer than ~50 lines of code
+- Clear, unambiguous requirements
+- No architectural decisions needed
+- Examples: fixing a typo, adding a simple validation, updating a config value
+
+For simple tasks, keep a mental todo list and proceed directly to implementation.
+
+**Create `PLAN.md` for complex tasks:**
+- Multiple files affected
+- Architectural or design decisions required
+- Ambiguous requirements needing clarification
+- New patterns or integrations being introduced
+- Examples: new API endpoint, refactoring a module, adding a new feature
 
 ### Phase 1: Analysis & Planning
 
@@ -24,8 +55,7 @@ This workflow is mandatory for every new feature, bug fix, or significant code m
 
 3. **Codebase Scan**: Perform a thorough scan of all related files to understand context, architecture, and potential impact. Update `MEMORIES.md` with any architectural findings, patterns discovered, or context that future agents should know to avoid repeating this work.
 
-4. **Create `PLAN.md`**: Create a temporary `PLAN.md` file in the root directory:
-
+4. **Create `PLAN.md`** (if needed): Create a temporary `PLAN.md` file in the root directory:
 ```
    # PLAN: [Brief Description of Task]
 
@@ -63,13 +93,13 @@ This workflow is mandatory for every new feature, bug fix, or significant code m
 1. **Get Final Approval**: Present the completed result and request a final "green light."
 2. **Update `MEMORIES.md`**: Record any new learnings, preferences, or patterns discovered.
 3. **Update `PROGRESS.md`**: Add task entry with file changes and any flags.
-4. **Cleanup**: Delete `PLAN.md`.
+4. **Cleanup**: Delete `PLAN.md` (if created).
 5. **Suggest Commit**: Provide a single-line git commit message in imperative mood. Do not run the commit.
+
 
 ## PROGRESS.md Format
 
 Purpose: High-level project evolution log. One entry per completed task. Enables any reader to understand what changed and why over time.
-
 ```
 Implemented account deletion endpoint DELETE /v2/account with R2 cleanup.
 - Added `delete_all_user_files` to `src/services/storage.rs` for batch R2 deletion using ListObjectsV2/DeleteObjects.
@@ -89,7 +119,6 @@ Fixed race condition in session refresh logic.
 ```
 
 Rules:
-
 - Single sentence task summary in imperative mood, include endpoint/feature name
 - Bullet points for file changes: `path/to/file.ext` with brief description of change
 - Flags (TODO/ISSUE/WORKAROUND/TRADEOFF/DEPRECATED) only when applicable, always include resolution path
@@ -99,7 +128,6 @@ Rules:
 ## MEMORIES.md Format
 
 Purpose: Long-term memory for stack info, user preferences, project patterns, and domain context. Survives across all sessions.
-
 ```
 Tooling
 - Stack: TypeScript, Express, Jest, ESLint, Prettier
@@ -139,7 +167,6 @@ Miscellaneous
 ```
 
 Rules:
-
 - No headers, group related items with empty lines
 - Bullet points or single lines only, no prose
 - Update incrementally, do not rewrite entire file
@@ -158,7 +185,6 @@ Write code that is trivial to unit test in isolation. The agent writes **only un
 - **Use interfaces/traits/protocols**: Depend on abstractions, not concrete implementations.
 - **Pure functions over stateful methods**: Given the same input, return the same output. No side effects.
 - **Isolate I/O at the edges**: Business logic should be pure. Push file, network, and database calls to the outer layer.
-
 ```
 // Bad: Untestable—creates its own dependency
 class OrderService {
@@ -180,7 +206,6 @@ class OrderService {
 2. Write Idiomatic Code
 
 Leverage the language's type system, standard library, and common patterns. Code should look like it belongs in the ecosystem.
-
 ```
 // Bad: C-style loop, manual indexing (in a language with iterators)
 function findUser(users, name) {
@@ -197,7 +222,6 @@ function findUser(users, name) {
   return users.find(user => user.name === name) ?? null
 }
 ```
-
 ```rust
 // Bad: Manual iteration in Rust
 fn find_user<'a>(users: &'a [User], name: &str) -> Option<&'a User> {
@@ -219,17 +243,24 @@ fn find_user<'a>(users: &'a [User], name: &str) -> Option<&'a User> {
 
 Favor simple, robust code over clever solutions. Prioritize straightforward logic that handles all cases uniformly, eliminating special-case handling which is a common source of bugs.
 
+**Eliminate edge cases through design, not patches.** When encountering a bug or edge case, do not immediately fix the symptom. Instead:
+1. Zoom out and understand why the problem exists
+2. Identify the architectural flaw that allowed it
+3. Redesign so the problem becomes impossible
+
+This applies to all layers—UI glitches, backend errors, data inconsistencies. A rendering bug isn't fixed by adding a conditional; it's fixed by restructuring state management so invalid states can't occur. A race condition isn't fixed by adding a lock; it's fixed by removing shared mutable state.
+
 ```
 // Bad: Complex, with special-casing for head node
 function removeFromList(list, value) {
   if (!list.head) return
-
+  
   // Special case: head is the node to remove
   if (list.head.value === value) {
     list.head = list.head.next
     return
   }
-
+  
   // General case: find and remove
   let prev = list.head
   while (prev.next) {
@@ -245,7 +276,7 @@ function removeFromList(list, value) {
 function removeFromList(list, value) {
   let cursor = { next: list.head }  // Virtual node before head
   const dummy = cursor
-
+  
   while (cursor.next) {
     if (cursor.next.value === value) {
       cursor.next = cursor.next.next
@@ -253,12 +284,22 @@ function removeFromList(list, value) {
     }
     cursor = cursor.next
   }
-
+  
   list.head = dummy.next
 }
 ```
 
-The principle: if you find yourself writing `if` statements to handle "edge cases" differently from the "normal case," step back and look for a data structure or algorithm that treats all cases the same.
+```
+// Bad: Patching a UI flicker with a timeout
+useEffect(() => {
+  setTimeout(() => setVisible(true), 100)  // ❌ Hides the real problem
+}, [])
+
+// Good: Fix the render order so flicker can't happen
+// Ensure data is loaded before component mounts, or use suspense boundaries
+```
+
+The principle: if you find yourself writing `if` statements to handle "edge cases" differently from the "normal case," step back and look for a data structure or algorithm that treats all cases the same. If you're adding a workaround, you're not done—find the root cause.
 
 4. Single Responsibility
 
@@ -267,7 +308,6 @@ Each function, class, or module should do exactly one thing. If you need the wor
 5. Fail Fast and Explicitly
 
 Validate inputs at boundaries. Return errors, don't throw exceptions for expected failures. Make invalid states unrepresentable through types.
-
 ```
 // Bad: Silent failure
 function getUser(id) {
@@ -324,25 +364,24 @@ Use structured logging with appropriate levels for observability. Include contex
 - `warn`: Potential issues or handled transient errors
 - `info`: Significant lifecycle events (startup, shutdown, request completed)
 - `debug`: Detailed diagnostic information for troubleshooting
-
 ```
 // Bad: Unstructured, hard to query
 console.log(`User ${userId} failed to login: ${error.message}`)
 
 // Good: Structured with context
-logger.warn("login failed", {
-  userId,
+logger.warn("login failed", { 
+  userId, 
   reason: error.code,
-  attempt: attemptCount
+  attempt: attemptCount 
 })
 ```
+
 
 ## Comments & Documentation
 
 1. **Explain the why, not the what.** Code shows what. Comments show why.
 2. **Delete commented-out code.** Use version control instead.
 3. **Document public APIs.** Internal implementation needs fewer comments if code is clear.
-
 ```
 // ✅ Good: Explains non-obvious reasoning
 // Using insertion sort here because n < 10 in practice and it's faster for small arrays
@@ -353,269 +392,18 @@ for user in users { }
 ```
 
 ## Execution & Commands
-
 DO NOT RUN, any commands which would do irreversible changes to the host system like,
-
 - Install/Updating/Uninstalling system level packages
 - Changing system level configurations
-  You are encouraged, use tools (kubectl, git, gh, curl, ls, docker, etc.) as much as needed in READ ONLY to gather information.
-
----
-
-## Svelte 5 & SvelteKit Standards
-
-This project uses **Svelte 5** with runes and **SvelteKit** with the Node adapter. Follow these conventions strictly.
-
-### Svelte 5 Runes (Mandatory)
-
-Always use runes instead of legacy Svelte 4 patterns:
-
-```svelte
-<!-- ✅ CORRECT: Svelte 5 Runes -->
-<script lang="ts">
-	// Reactive state
-	let count = $state(0);
-
-	// Derived values
-	let doubled = $derived(count * 2);
-
-	// Props with defaults
-	let { title, description = 'Default' } = $props<{ title: string; description?: string }>();
-
-	// Side effects
-	$effect(() => {
-		console.log('Count changed:', count);
-	});
-</script>
-```
-
-```svelte
-<!-- ❌ WRONG: Legacy Svelte 4 patterns -->
-<script lang="ts">
-	// Don't use these
-	export let title; // Use $props() instead
-	let count = 0; // Use $state() for reactive values
-	$: doubled = count * 2; // Use $derived() instead
-	$: {
-		console.log(count);
-	} // Use $effect() instead
-</script>
-```
-
-### Component Structure
-
-```svelte
-<script lang="ts">
-	// 1. Imports
-	import Component from '$lib/components/Component.svelte';
-	import { someStore } from '$lib/stores';
-
-	// 2. Props
-	let { data, children } = $props<{ data: PageData; children?: Snippet }>();
-
-	// 3. State
-	let loading = $state(false);
-	let items = $state<Item[]>([]);
-
-	// 4. Derived values
-	let filteredItems = $derived(items.filter((i) => i.active));
-
-	// 5. Effects
-	$effect(() => {
-		// Side effects here
-	});
-
-	// 6. Functions
-	function handleClick() {
-		loading = true;
-	}
-</script>
-
-<!-- Template -->
-<div class="container">
-	{#if loading}
-		<LoadingSpinner />
-	{:else}
-		{#each filteredItems as item (item.id)}
-			<ItemCard {item} />
-		{/each}
-	{/if}
-</div>
-
-<!-- Scoped styles (prefer Tailwind) -->
-<style>
-	/* Only when Tailwind classes aren't sufficient */
-</style>
-```
-
-### Snippets (Svelte 5 Slots Replacement)
-
-```svelte
-<!-- Parent component -->
-<script lang="ts">
-	import Card from '$lib/components/Card.svelte';
-</script>
-
-<Card>
-	{#snippet header()}
-		<h2>Title</h2>
-	{/snippet}
-
-	{#snippet default()}
-		<p>Content goes here</p>
-	{/snippet}
-</Card>
-
-<!-- Card.svelte -->
-<script lang="ts">
-	import type { Snippet } from 'svelte';
-
-	let { header, children }: { header?: Snippet; children?: Snippet } = $props();
-</script>
-
-<div class="card">
-	{#if header}
-		<div class="card-header">
-			{@render header()}
-		</div>
-	{/if}
-	{#if children}
-		{@render children()}
-	{/if}
-</div>
-```
-
-### Event Handling (Svelte 5)
-
-```svelte
-<!-- ✅ CORRECT: Svelte 5 event handling -->
-<button onclick={handleClick}>Click</button>
-<input oninput={(e) => (value = e.currentTarget.value)} />
-<form onsubmit={handleSubmit}>...</form>
-
-<!-- ❌ WRONG: Legacy on:event directive -->
-<button on:click={handleClick}>Click</button>
-<input on:input={handleInput} />
-```
-
-### TypeScript & Props
-
-```svelte
-<script lang="ts">
-	// Always type your props
-	interface Props {
-		title: string;
-		count?: number;
-		items: Array<{ id: string; name: string }>;
-		onUpdate?: (value: string) => void;
-	}
-
-	let { title, count = 0, items, onUpdate }: Props = $props();
-</script>
-```
-
-### Styling with Tailwind CSS
-
-```svelte
-<!-- ✅ CORRECT: Use Tailwind utility classes -->
-<div class="flex items-center justify-between gap-4 rounded-lg bg-white p-4 shadow-md">
-	<h1 class="text-2xl font-bold text-gray-900">Title</h1>
-	<button class="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"> Action </button>
-</div>
-
-<!-- ❌ AVOID: Custom CSS when Tailwind works -->
-<style>
-	.container {
-		display: flex;
-		align-items: center;
-	}
-</style>
-```
-
-### SvelteKit Conventions
-
-**File Structure:**
-
-```
-src/
-├── lib/
-│   ├── components/    # Reusable Svelte components
-│   ├── server/        # Server-only code
-│   ├── stores/        # Svelte stores
-│   ├── utils/         # Utility functions
-│   └── types/         # TypeScript types
-├── routes/
-│   ├── +layout.svelte # Root layout
-│   ├── +page.svelte   # Home page
-│   └── api/           # API routes
-└── app.html           # HTML template
-```
-
-**Load Functions:**
-
-```typescript
-// +page.server.ts - Server-side data loading
-import type { PageServerLoad } from './$types';
-
-export const load: PageServerLoad = async ({ params, fetch }) => {
-	const data = await fetch(`/api/items/${params.id}`);
-	return {
-		item: await data.json()
-	};
-};
-```
-
-**Form Actions:**
-
-```typescript
-// +page.server.ts
-import type { Actions } from './$types';
-import { fail } from '@sveltejs/kit';
-
-export const actions: Actions = {
-	create: async ({ request }) => {
-		const formData = await request.formData();
-		const name = formData.get('name');
-
-		if (!name) {
-			return fail(400, { error: 'Name is required' });
-		}
-
-		// Process and redirect
-	}
-};
-```
-
-### After Each Change
-
-Run these commands after making changes:
-
-```bash
-bun run format      # Format with Prettier
-bun run lint        # Run ESLint
-bun run check       # Run Svelte compiler check
-```
-
-All three commands must pass without errors before considering a task complete.
-
-### PWA & Push Notifications
-
-This project is configured as a PWA with push notification support via `@vite-pwa/sveltekit`.
-
-- Service worker is auto-generated
-- Use `ReloadPrompt` component for update notifications
-- Register for push notifications via service worker
-
----
+You are encouraged, use tools (kubectl, git, gh, curl, ls, docker, etc.) as much as needed in READ ONLY to gather information.
 
 ## Summary
 
-| Phase        | Actions                                                                                                                  |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| **Plan**     | Read memory → Detect stack if needed → Understand task → Scan codebase → Update memory → Create `PLAN.md` → Get approval |
-| **Execute**  | Implement step-by-step → Verify each step → Keep changes surgical                                                        |
-| **Code**     | Testable → Idiomatic → Good taste → Small functions → Explicit                                                           |
-| **Svelte**   | Use runes (`$state`, `$derived`, `$props`, `$effect`) → Tailwind CSS → `onclick` not `on:click`                          |
-| **Test**     | Unit tests only → Mock dependencies → Test behavior not implementation                                                   |
-| **Verify**   | `bun run format` → `bun run lint` → `bun run check` → All must pass                                                      |
-| **Finalize** | Get approval → Update `MEMORIES.md` → Update `PROGRESS.md` → Delete `PLAN.md` → Suggest commit message                   |
+| Phase | Actions |
+|-------|---------|
+| **Assess** | Determine if `PLAN.md` is needed based on task complexity |
+| **Plan** | Read memory → Detect stack if needed → Understand task → Scan codebase → Update memory → Create `PLAN.md` (if needed) → Get approval |
+| **Execute** | Implement step-by-step → Verify each step → Keep changes surgical |
+| **Code** | Testable → Idiomatic → Good taste → Small functions → Explicit |
+| **Test** | Unit tests only → Mock dependencies → Test behavior not implementation |
+| **Finalize** | Get approval → Update `MEMORIES.md` → Update `PROGRESS.md` → Delete `PLAN.md` → Suggest commit message |

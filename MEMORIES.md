@@ -54,11 +54,17 @@ Script Checker
 - Timeout enforced via Promise.race
 - Example use cases: multi-endpoint checks, JSON response validation, conditional logic
 
+Scheduler Worker
+
+- Separate Cloudflare Worker at workers/scheduler/
+- Triggers /api/cron every minute via cron trigger
+- Deploy: cd workers/scheduler && wrangler deploy
+- Has /trigger endpoint for manual testing
+
 Future Cloudflare Products
 
 - Durable Objects: Real-time WebSocket for live updates (Phase 2)
 - Queues: Async notification processing (Phase 2)
-- Cron Triggers: Automated scheduled checks (needs configuration in dashboard)
 
 Architectural Notes
 

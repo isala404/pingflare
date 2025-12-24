@@ -1,0 +1,10 @@
+name = "pingflare-scheduler"
+main = "index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["*/1 * * * *"]  # Run every minute
+
+[vars]
+PINGFLARE_URL = "https://pingflare.pages.dev"

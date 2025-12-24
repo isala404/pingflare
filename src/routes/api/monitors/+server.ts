@@ -46,7 +46,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		return json({ error: 'Name and type are required' }, { status: 400 });
 	}
 
-	if (!['http', 'tcp', 'dns', 'push'].includes(input.type)) {
+	if (!['http', 'tcp', 'dns', 'push', 'script'].includes(input.type)) {
 		return json({ error: 'Invalid monitor type' }, { status: 400 });
 	}
 
@@ -56,6 +56,10 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 	if (input.type === 'tcp' && (!input.hostname || !input.port)) {
 		return json({ error: 'Hostname and port are required for TCP monitors' }, { status: 400 });
+	}
+
+	if (input.type === 'script' && !input.script) {
+		return json({ error: 'Script is required for script monitors' }, { status: 400 });
 	}
 
 	try {

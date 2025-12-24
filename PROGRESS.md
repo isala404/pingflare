@@ -79,3 +79,12 @@ Added JavaScript health check evaluator for custom scripts.
   - Fetch mocking and multiple concurrent fetches
   - Logging, timeout behavior, strict mode enforcement
 - Deployed and verified working
+
+Fixed script monitor creation bug and added scheduled health checks.
+
+- Added 'script' to type validation in src/routes/api/monitors/+server.ts (POST)
+- Added 'script' to type validation in src/routes/api/monitors/[id]/+server.ts (PUT)
+- Added script field validation for script monitor type
+- Created separate scheduled Worker at workers/scheduler/ for automatic cron triggers
+- Scheduler runs every minute, calls /api/cron endpoint
+- Deploy scheduler: cd workers/scheduler && wrangler deploy

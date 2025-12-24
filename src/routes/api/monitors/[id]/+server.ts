@@ -56,8 +56,12 @@ export const PUT: RequestHandler = async ({ params, request, platform }) => {
 		return json({ error: 'Invalid JSON body' }, { status: 400 });
 	}
 
-	if (input.type && !['http', 'tcp', 'dns', 'push'].includes(input.type)) {
+	if (input.type && !['http', 'tcp', 'dns', 'push', 'script'].includes(input.type)) {
 		return json({ error: 'Invalid monitor type' }, { status: 400 });
+	}
+
+	if (input.type === 'script' && input.script === undefined) {
+		return json({ error: 'Script is required for script monitors' }, { status: 400 });
 	}
 
 	try {
