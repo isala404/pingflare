@@ -1,8 +1,13 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import type { NotificationChannel } from '$lib/types/notification';
+	import type { PageData } from './$types';
 	import NotificationChannelForm from '$lib/components/NotificationChannelForm.svelte';
 	import NotificationChannelCard from '$lib/components/NotificationChannelCard.svelte';
+	import PushNotificationToggle from '$lib/components/PushNotificationToggle.svelte';
+	import { AppShell, Container, PageHeader } from '$lib/components/layout';
+	import { Card, Button, Spinner, Alert } from '$lib/components/ui';
+
+	let { data }: { data: PageData } = $props();
 
 	let channels = $state<NotificationChannel[]>([]);
 	let loading = $state(true);
@@ -81,49 +86,47 @@
 	});
 </script>
 
-<div class="min-h-screen bg-gray-50">
-	<header class="border-b border-gray-200 bg-white">
-		<div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-			<div>
-				<h1 class="text-2xl font-bold text-gray-900">Notification Channels</h1>
-				<p class="text-sm text-gray-500">Configure where to send alerts</p>
-			</div>
-			<div class="flex items-center gap-3">
-				<a
-					href={resolve('/')}
-					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-				>
-					Back to Dashboard
-				</a>
-				<button
-					onclick={handleAddNew}
-					class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-				>
-					Add Channel
-				</button>
-			</div>
-		</div>
-	</header>
+<svelte:head>
+	<title>Notifications - Pingflare</title>
+</svelte:head>
 
-	<main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+<AppShell user={data.user}>
+	<Container size="xl">
+		<PageHeader title="Notification Channels" subtitle="Configure where to send alerts">
+			{#snippet actions()}
+				<Button onclick={handleAddNew}>
+					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+					</svg>
+					<span class="hidden sm:inline">Add Channel</span>
+				</Button>
+			{/snippet}
+		</PageHeader>
+
 		{#if error}
-			<div class="mb-6 rounded-md bg-red-50 p-4 text-red-700">{error}</div>
+			<div class="mb-6">
+				<Alert variant="error" dismissible ondismiss={() => (error = '')}>{error}</Alert>
+			</div>
 		{/if}
+
+		<!-- Browser Push Notifications -->
+		<Card class="mb-6">
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<h3 class="font-medium text-gray-900">Browser Notifications</h3>
+					<p class="text-sm text-gray-500">Receive push notifications in this browser</p>
+				</div>
+				<PushNotificationToggle onSubscriptionChange={loadChannels} />
+			</div>
+		</Card>
 
 		{#if loading}
 			<div class="flex items-center justify-center py-12">
-				<div
-					class="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"
-				></div>
+				<Spinner size="lg" />
 			</div>
 		{:else if channels.length === 0}
-			<div class="rounded-lg bg-white p-12 text-center shadow-sm">
-				<svg
-					class="mx-auto h-12 w-12 text-gray-400"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
+			<Card class="py-12 text-center">
+				<svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
 						stroke-linecap="round"
 						stroke-linejoin="round"
@@ -133,13 +136,10 @@
 				</svg>
 				<h3 class="mt-4 text-lg font-medium text-gray-900">No notification channels</h3>
 				<p class="mt-2 text-gray-500">Get started by adding a notification channel.</p>
-				<button
-					onclick={handleAddNew}
-					class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-				>
-					Add Channel
-				</button>
-			</div>
+				<div class="mt-4">
+					<Button onclick={handleAddNew}>Add Channel</Button>
+				</div>
+			</Card>
 		{:else}
 			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 				{#each channels as channel (channel.id)}
@@ -152,8 +152,8 @@
 				{/each}
 			</div>
 		{/if}
-	</main>
-</div>
+	</Container>
+</AppShell>
 
 {#if showForm}
 	<NotificationChannelForm

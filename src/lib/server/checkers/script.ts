@@ -175,48 +175,20 @@ export async function executeScript(
 }
 
 function parseScript(script: string): ScriptDSL {
-	// Try to parse as JSON DSL
 	const trimmed = script.trim();
 
-	if (trimmed.startsWith('{')) {
-		try {
-			const parsed = JSON.parse(trimmed);
-			if (parsed.steps && Array.isArray(parsed.steps)) {
-				return parsed as ScriptDSL;
-			}
-		} catch {
-			// Not valid JSON, try legacy format
+	try {
+		const parsed = JSON.parse(trimmed);
+		if (parsed.steps && Array.isArray(parsed.steps)) {
+			return parsed as ScriptDSL;
 		}
-	}
-
-	// Legacy format: extract URLs and create simple steps
-	const urls = extractLegacyUrls(script);
-	if (urls.length === 0) {
-		throw new Error('Script must contain valid JSON DSL or at least one fetch() call');
-	}
-
-	return {
-		steps: urls.map((url, i) => ({
-			name: `request_${i + 1}`,
-			request: { method: 'GET' as const, url }
-		}))
-	};
-}
-
-function extractLegacyUrls(script: string): string[] {
-	const urls: string[] = [];
-	const patterns = [/ctx\.fetch\s*\(\s*['"`]([^'"`]+)['"`]/g, /fetch\s*\(\s*['"`]([^'"`]+)['"`]/g];
-
-	for (const pattern of patterns) {
-		let match;
-		while ((match = pattern.exec(script)) !== null) {
-			if (match[1] && !urls.includes(match[1])) {
-				urls.push(match[1]);
-			}
+		throw new Error('Script must have a "steps" array');
+	} catch (err) {
+		if (err instanceof SyntaxError) {
+			throw new Error(`Invalid JSON: ${err.message}`);
 		}
+		throw err;
 	}
-
-	return urls;
 }
 
 async function executeStep(

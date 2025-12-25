@@ -1,15 +1,25 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
+	import { AppShell, Container, PageHeader } from '$lib/components/layout';
+	import { Card, Input, Button, Alert } from '$lib/components/ui';
 
 	let { data }: { data: PageData } = $props();
 
 	// Profile form
-	let name = $state(data.user?.name ?? '');
+	let name = $state('');
+	let nameInitialized = $state(false);
 	let profileError = $state('');
 	let profileSuccess = $state('');
 	let savingProfile = $state(false);
+
+	// Sync name with user data when it becomes available
+	$effect(() => {
+		if (data.user?.name && !nameInitialized) {
+			name = data.user.name;
+			nameInitialized = true;
+		}
+	});
 
 	// Password form
 	let currentPassword = $state('');
@@ -102,7 +112,7 @@
 
 	async function handleLogout() {
 		await fetch('/api/auth/logout', { method: 'POST' });
-		await goto(resolve('/login'));
+		await goto('/login');
 	}
 </script>
 
@@ -110,145 +120,116 @@
 	<title>Settings - Pingflare</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50">
-	<header class="border-b border-gray-200 bg-white">
-		<div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-			<div>
-				<h1 class="text-2xl font-bold text-gray-900">Settings</h1>
-				<p class="text-sm text-gray-500">Manage your account</p>
-			</div>
-			<div class="flex items-center gap-3">
-				<a
-					href={resolve('/')}
-					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-				>
-					Back to Dashboard
-				</a>
-			</div>
-		</div>
-	</header>
+<AppShell user={data.user}>
+	<Container size="md">
+		<PageHeader title="Settings" subtitle="Manage your account" />
 
-	<main class="mx-auto max-w-2xl px-4 py-6 sm:px-6 lg:px-8">
-		<!-- Profile Section -->
-		<div class="mb-8 rounded-lg bg-white p-6 shadow-sm">
-			<h2 class="mb-4 text-lg font-semibold text-gray-900">Profile</h2>
+		<div class="space-y-6">
+			<!-- Profile Section -->
+			<Card>
+				{#snippet header()}
+					<h2 class="text-lg font-semibold text-gray-900">Profile</h2>
+				{/snippet}
 
-			{#if profileError}
-				<div class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{profileError}</div>
-			{/if}
+				{#if profileError}
+					<div class="mb-4">
+						<Alert variant="error" dismissible ondismiss={() => (profileError = '')}>{profileError}</Alert>
+					</div>
+				{/if}
 
-			{#if profileSuccess}
-				<div class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">{profileSuccess}</div>
-			{/if}
+				{#if profileSuccess}
+					<div class="mb-4">
+						<Alert variant="success" dismissible ondismiss={() => (profileSuccess = '')}>{profileSuccess}</Alert>
+					</div>
+				{/if}
 
-			<form onsubmit={handleProfileSubmit} class="space-y-4">
-				<div>
-					<label for="name" class="block text-sm font-medium text-gray-700">Name</label>
-					<input
+				<form onsubmit={handleProfileSubmit} class="space-y-4">
+					<Input
 						type="text"
-						id="name"
+						name="name"
+						label="Name"
 						bind:value={name}
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+						required
 					/>
-				</div>
 
-				<div>
-					<label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-					<input
+					<Input
 						type="email"
-						id="email"
+						name="email"
+						label="Email"
 						value={data.user?.email ?? ''}
 						disabled
-						class="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-gray-500"
+						helper="Email cannot be changed"
 					/>
-					<p class="mt-1 text-xs text-gray-500">Email cannot be changed</p>
-				</div>
 
-				<button
-					type="submit"
-					disabled={savingProfile}
-					class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-				>
-					{savingProfile ? 'Saving...' : 'Save Profile'}
-				</button>
-			</form>
-		</div>
+					<Button type="submit" loading={savingProfile}>
+						{savingProfile ? 'Saving...' : 'Save Profile'}
+					</Button>
+				</form>
+			</Card>
 
-		<!-- Password Section -->
-		<div class="mb-8 rounded-lg bg-white p-6 shadow-sm">
-			<h2 class="mb-4 text-lg font-semibold text-gray-900">Change Password</h2>
+			<!-- Password Section -->
+			<Card>
+				{#snippet header()}
+					<h2 class="text-lg font-semibold text-gray-900">Change Password</h2>
+				{/snippet}
 
-			{#if passwordError}
-				<div class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{passwordError}</div>
-			{/if}
+				{#if passwordError}
+					<div class="mb-4">
+						<Alert variant="error" dismissible ondismiss={() => (passwordError = '')}>{passwordError}</Alert>
+					</div>
+				{/if}
 
-			{#if passwordSuccess}
-				<div class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">{passwordSuccess}</div>
-			{/if}
+				{#if passwordSuccess}
+					<div class="mb-4">
+						<Alert variant="success" dismissible ondismiss={() => (passwordSuccess = '')}>{passwordSuccess}</Alert>
+					</div>
+				{/if}
 
-			<form onsubmit={handlePasswordSubmit} class="space-y-4">
-				<div>
-					<label for="currentPassword" class="block text-sm font-medium text-gray-700"
-						>Current Password</label
-					>
-					<input
+				<form onsubmit={handlePasswordSubmit} class="space-y-4">
+					<Input
 						type="password"
-						id="currentPassword"
+						name="currentPassword"
+						label="Current Password"
 						bind:value={currentPassword}
 						autocomplete="current-password"
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 					/>
-				</div>
 
-				<div>
-					<label for="newPassword" class="block text-sm font-medium text-gray-700"
-						>New Password</label
-					>
-					<input
+					<Input
 						type="password"
-						id="newPassword"
+						name="newPassword"
+						label="New Password"
+						placeholder="Minimum 8 characters"
 						bind:value={newPassword}
 						autocomplete="new-password"
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-						placeholder="Minimum 8 characters"
 					/>
-				</div>
 
-				<div>
-					<label for="confirmNewPassword" class="block text-sm font-medium text-gray-700"
-						>Confirm New Password</label
-					>
-					<input
+					<Input
 						type="password"
-						id="confirmNewPassword"
+						name="confirmPassword"
+						label="Confirm New Password"
 						bind:value={confirmPassword}
 						autocomplete="new-password"
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 					/>
-				</div>
 
-				<button
-					type="submit"
-					disabled={savingPassword}
-					class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-				>
-					{savingPassword ? 'Updating...' : 'Update Password'}
-				</button>
-			</form>
-		</div>
+					<Button type="submit" loading={savingPassword}>
+						{savingPassword ? 'Updating...' : 'Update Password'}
+					</Button>
+				</form>
+			</Card>
 
-		<!-- Account Section -->
-		<div class="rounded-lg bg-white p-6 shadow-sm">
-			<h2 class="mb-4 text-lg font-semibold text-gray-900">Account</h2>
-			<p class="mb-4 text-sm text-gray-600">
-				Role: <span class="font-medium capitalize">{data.user?.role}</span>
-			</p>
-			<button
-				onclick={handleLogout}
-				class="rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
-			>
-				Sign Out
-			</button>
+			<!-- Account Section -->
+			<Card>
+				{#snippet header()}
+					<h2 class="text-lg font-semibold text-gray-900">Account</h2>
+				{/snippet}
+
+				<p class="mb-4 text-sm text-gray-600">
+					Role: <span class="font-medium capitalize">{data.user?.role}</span>
+				</p>
+				<Button variant="danger" onclick={handleLogout}>
+					Sign Out
+				</Button>
+			</Card>
 		</div>
-	</main>
-</div>
+	</Container>
+</AppShell>

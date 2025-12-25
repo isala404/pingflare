@@ -1,5 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Button, Spinner } from '$lib/components/ui';
+
+	interface Props {
+		onSubscriptionChange?: () => void;
+	}
+
+	let { onSubscriptionChange }: Props = $props();
 
 	type PushState = 'loading' | 'unsupported' | 'denied' | 'disabled' | 'enabled';
 
@@ -7,8 +14,54 @@
 	let isSubscribing = $state(false);
 	let registration: ServiceWorkerRegistration | null = null;
 
+	function getBrowserName(): string {
+		const ua = navigator.userAgent;
+
+		// Try to get browser name from the end of user agent (most reliable part)
+		// e.g., "Chrome/120.0.0.0" from "Mozilla/5.0 ... Chrome/120.0.0.0 Safari/537.36"
+		try {
+			const lastPart = ua.split(') ').pop() ?? '';
+			const browserPart = lastPart.split('/')[0]?.trim();
+			if (browserPart && browserPart !== 'Safari' && browserPart.length < 20) {
+				return browserPart;
+			}
+		} catch {
+			// Fall through to detection
+		}
+
+		// Fallback: detect common browsers
+		if (ua.includes('Firefox')) return 'Firefox';
+		if (ua.includes('Edg')) return 'Edge';
+		if (ua.includes('Chrome')) return 'Chrome';
+		if (ua.includes('Safari')) return 'Safari';
+		return 'Browser';
+	}
+
+	function getPlatformName(): string {
+		// Try modern API first
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const uaData = (navigator as any).userAgentData;
+		if (uaData?.platform) {
+			return uaData.platform;
+		}
+
+		// Fallback: parse from userAgent
+		const ua = navigator.userAgent;
+		if (ua.includes('Windows')) return 'Windows';
+		if (ua.includes('Mac')) return 'macOS';
+		if (ua.includes('Linux')) return 'Linux';
+		if (ua.includes('Android')) return 'Android';
+		if (ua.includes('iPhone') || ua.includes('iPad')) return 'iOS';
+		return '';
+	}
+
+	function getSubscriptionName(): string {
+		const browser = getBrowserName();
+		const platform = getPlatformName();
+		return platform ? `${browser} - ${platform}` : browser;
+	}
+
 	onMount(async () => {
-		// Check browser support
 		if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
 			pushState = 'unsupported';
 			return;
@@ -19,9 +72,7 @@
 			return;
 		}
 
-		// Use the existing PWA service worker (which imports sw-push.js)
 		try {
-			// Wait for the service worker to be ready
 			registration = await navigator.serviceWorker.ready;
 			const subscription = await registration.pushManager.getSubscription();
 			pushState = subscription ? 'enabled' : 'disabled';
@@ -39,7 +90,6 @@
 				return;
 			}
 
-			// Use the existing service worker registration
 			if (!registration) {
 				registration = await navigator.serviceWorker.ready;
 			}
@@ -55,10 +105,14 @@
 			await fetch('/api/push/subscribe', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(subscription.toJSON())
+				body: JSON.stringify({
+					...subscription.toJSON(),
+					name: getSubscriptionName()
+				})
 			});
 
 			pushState = 'enabled';
+			onSubscriptionChange?.();
 		} catch (err) {
 			console.error('Failed to enable push notifications:', err);
 		} finally {
@@ -81,6 +135,7 @@
 				await subscription.unsubscribe();
 			}
 			pushState = 'disabled';
+			onSubscriptionChange?.();
 		} catch (err) {
 			console.error('Failed to disable push notifications:', err);
 		} finally {
@@ -102,27 +157,13 @@
 
 <div class="flex items-center gap-2">
 	{#if pushState === 'loading'}
-		<div class="flex items-center gap-2 text-gray-500">
-			<svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
-				></circle>
-				<path
-					class="opacity-75"
-					fill="currentColor"
-					d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-				></path>
-			</svg>
-		</div>
+		<Spinner size="sm" />
 	{:else if pushState === 'unsupported'}
 		<span class="text-sm text-gray-500">Push not supported</span>
 	{:else if pushState === 'denied'}
 		<span class="text-sm text-red-600">Notifications blocked</span>
 	{:else if pushState === 'disabled'}
-		<button
-			onclick={enablePush}
-			disabled={isSubscribing}
-			class="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-		>
+		<Button size="sm" loading={isSubscribing} onclick={enablePush}>
 			<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path
 					stroke-linecap="round"
@@ -132,9 +173,9 @@
 				/>
 			</svg>
 			{isSubscribing ? 'Enabling...' : 'Enable Notifications'}
-		</button>
+		</Button>
 	{:else if pushState === 'enabled'}
-		<div class="flex items-center gap-2">
+		<div class="flex items-center gap-3">
 			<span class="flex items-center gap-1.5 text-sm text-green-600">
 				<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
 					<path
@@ -145,13 +186,9 @@
 				</svg>
 				Push enabled
 			</span>
-			<button
-				onclick={disablePush}
-				disabled={isSubscribing}
-				class="text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
-			>
+			<Button variant="ghost" size="sm" loading={isSubscribing} onclick={disablePush}>
 				Disable
-			</button>
+			</Button>
 		</div>
 	{/if}
 </div>

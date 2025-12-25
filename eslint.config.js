@@ -25,6 +25,10 @@ export default [
 			parserOptions: {
 				parser: ts.parser
 			}
+		},
+		rules: {
+			// Disable resolve() requirement - app doesn't use a base path
+			'svelte/no-navigation-without-resolve': 'off'
 		}
 	},
 	{

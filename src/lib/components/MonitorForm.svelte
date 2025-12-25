@@ -4,6 +4,7 @@
 	import type { ScriptDSL } from '$lib/types/script';
 	import type { NotificationChannel, MonitorNotificationInput } from '$lib/types/notification';
 	import { getDefaultScript, scriptToJson, jsonToScript } from '$lib/types/script';
+	import { Input, Button, Alert } from '$lib/components/ui';
 	import ScriptBuilder from './ScriptBuilder.svelte';
 	import ScriptEditor from './ScriptEditor.svelte';
 	import MonitorNotificationConfig from './MonitorNotificationConfig.svelte';
@@ -210,22 +211,20 @@ Requirement:
 
 <form onsubmit={handleSubmit} class="space-y-4">
 	{#if error}
-		<div class="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
+		<Alert variant="error" dismissible ondismiss={() => (error = '')}>{error}</Alert>
 	{/if}
 
-	<div>
-		<label for="name" class="block text-sm font-medium text-gray-700">Monitor Name</label>
-		<input
-			type="text"
-			id="name"
-			bind:value={name}
-			class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-			placeholder="My API Health Check"
-		/>
-	</div>
+	<Input
+		type="text"
+		name="name"
+		label="Monitor Name"
+		placeholder="My API Health Check"
+		bind:value={name}
+		required
+	/>
 
 	<div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
-		<div class="mb-4 flex items-center justify-between">
+		<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
 			<div class="flex items-center gap-3">
 				<span class="text-sm font-medium text-gray-700">Health Check Script</span>
 				<button
@@ -272,31 +271,23 @@ Requirement:
 		{/if}
 	</div>
 
-	<div class="grid grid-cols-2 gap-4">
-		<div>
-			<label for="intervalSeconds" class="block text-sm font-medium text-gray-700">
-				Check Interval (seconds)
-			</label>
-			<input
-				type="number"
-				id="intervalSeconds"
-				bind:value={intervalSeconds}
-				min="30"
-				max="3600"
-				class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-			/>
-		</div>
-		<div>
-			<label for="timeoutMs" class="block text-sm font-medium text-gray-700">Timeout (ms)</label>
-			<input
-				type="number"
-				id="timeoutMs"
-				bind:value={timeoutMs}
-				min="1000"
-				max="60000"
-				class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-			/>
-		</div>
+	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+		<Input
+			type="number"
+			name="intervalSeconds"
+			label="Check Interval (seconds)"
+			bind:value={intervalSeconds}
+			min={30}
+			max={3600}
+		/>
+		<Input
+			type="number"
+			name="timeoutMs"
+			label="Timeout (ms)"
+			bind:value={timeoutMs}
+			min={1000}
+			max={60000}
+		/>
 	</div>
 
 	<div class="flex items-center gap-2">
@@ -317,20 +308,12 @@ Requirement:
 		/>
 	</div>
 
-	<div class="flex justify-end gap-3 pt-4">
-		<button
-			type="button"
-			onclick={onCancel}
-			class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-		>
+	<div class="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-end">
+		<Button type="button" variant="secondary" onclick={onCancel}>
 			Cancel
-		</button>
-		<button
-			type="submit"
-			disabled={isSubmitting || !canSave}
-			class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-		>
-			{isSubmitting ? 'Saving...' : monitor ? 'Update' : 'Create'} Monitor
-		</button>
+		</Button>
+		<Button type="submit" loading={isSubmitting} disabled={!canSave}>
+			{isSubmitting ? 'Saving...' : monitor ? 'Update Monitor' : 'Create Monitor'}
+		</Button>
 	</div>
 </form>

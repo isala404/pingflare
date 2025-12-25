@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { NotificationChannel, NotificationChannelType } from '$lib/types/notification';
-	import Modal from './Modal.svelte';
+	import { Card, Input, Select, Button, Alert } from '$lib/components/ui';
 
 	interface Props {
 		channel: NotificationChannel | null;
@@ -19,11 +19,36 @@
 	let webhookUrl = $state('');
 	let webhookMethod: 'GET' | 'POST' = $state('POST');
 	let webhookHeaders = $state('');
-	let webhookBodyTemplate = $state('');
-	let webpushLabel = $state('');
+	let webpushSubscriptionId = $state<string | null>(null);
+
+	// Dynamic placeholder for name based on type
+	const namePlaceholders: Record<NotificationChannelType, string> = {
+		slack: 'e.g., Slack #devops',
+		discord: 'e.g., Discord #alerts',
+		webhook: 'e.g., PagerDuty Integration',
+		webpush: 'e.g., My Browser'
+	};
+	let namePlaceholder = $derived(namePlaceholders[type]);
 
 	let saving = $state(false);
 	let error = $state('');
+
+	// For new channels, exclude webpush (it's auto-created when enabling browser notifications)
+	// For editing existing webpush channels, we still show the form
+	const isWebpush = $derived(channel?.type === 'webpush');
+	const isNewChannel = $derived(!channel);
+
+	const typeOptions = [
+		{ value: 'slack', label: 'Slack' },
+		{ value: 'discord', label: 'Discord' },
+		{ value: 'webhook', label: 'Generic Webhook' }
+		// webpush is intentionally excluded - it's auto-created when enabling browser notifications
+	];
+
+	const methodOptions = [
+		{ value: 'POST', label: 'POST' },
+		{ value: 'GET', label: 'GET' }
+	];
 
 	$effect(() => {
 		if (channel) {
@@ -37,9 +62,8 @@
 					webhookUrl = config.url ?? '';
 					webhookMethod = config.method ?? 'POST';
 					webhookHeaders = config.headers ? JSON.stringify(config.headers, null, 2) : '';
-					webhookBodyTemplate = config.bodyTemplate ?? '';
 				} else if (channel.type === 'webpush') {
-					webpushLabel = config.label ?? '';
+					webpushSubscriptionId = config.subscriptionId ?? null;
 				}
 			} catch {
 				// Ignore parse errors
@@ -57,11 +81,10 @@
 				return {
 					url: webhookUrl,
 					method: webhookMethod,
-					headers: webhookHeaders ? JSON.parse(webhookHeaders) : undefined,
-					bodyTemplate: webhookBodyTemplate || undefined
+					headers: webhookHeaders ? JSON.parse(webhookHeaders) : undefined
 				};
 			case 'webpush':
-				return { label: webpushLabel };
+				return { subscriptionId: webpushSubscriptionId };
 		}
 	}
 
@@ -97,158 +120,145 @@
 			saving = false;
 		}
 	}
+
+	function handleBackdropClick(e: MouseEvent) {
+		if (e.target === e.currentTarget) {
+			onClose();
+		}
+	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') {
+			onClose();
+		}
+	}
 </script>
 
-<Modal open={true} title={channel ? 'Edit Channel' : 'Add Channel'} {onClose}>
-		<form onsubmit={handleSubmit} class="space-y-4">
-			{#if error}
-				<div class="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
-			{/if}
+<svelte:window onkeydown={handleKeydown} />
 
-			<div>
-				<label for="name" class="block text-sm font-medium text-gray-700">Name</label>
-				<input
-					type="text"
-					id="name"
-					bind:value={name}
-					required
-					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-					placeholder="e.g., Slack #devops"
-				/>
-			</div>
-
-			<div>
-				<label for="type" class="block text-sm font-medium text-gray-700">Type</label>
-				<select
-					id="type"
-					bind:value={type}
-					disabled={!!channel}
-					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-				>
-					<option value="slack">Slack</option>
-					<option value="discord">Discord</option>
-					<option value="webhook">Generic Webhook</option>
-					<option value="webpush">Web Push</option>
-				</select>
-			</div>
-
-			{#if type === 'slack'}
-				<div>
-					<label for="slackWebhookUrl" class="block text-sm font-medium text-gray-700"
-						>Webhook URL</label
-					>
-					<input
-						type="url"
-						id="slackWebhookUrl"
-						bind:value={slackWebhookUrl}
-						required
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						placeholder="https://hooks.slack.com/services/..."
-					/>
-				</div>
-			{:else if type === 'discord'}
-				<div>
-					<label for="discordWebhookUrl" class="block text-sm font-medium text-gray-700"
-						>Webhook URL</label
-					>
-					<input
-						type="url"
-						id="discordWebhookUrl"
-						bind:value={discordWebhookUrl}
-						required
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						placeholder="https://discord.com/api/webhooks/..."
-					/>
-				</div>
-			{:else if type === 'webhook'}
-				<div>
-					<label for="webhookUrl" class="block text-sm font-medium text-gray-700">URL</label>
-					<input
-						type="url"
-						id="webhookUrl"
-						bind:value={webhookUrl}
-						required
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						placeholder="https://example.com/webhook"
-					/>
-				</div>
-				<div>
-					<label for="webhookMethod" class="block text-sm font-medium text-gray-700">Method</label>
-					<select
-						id="webhookMethod"
-						bind:value={webhookMethod}
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-					>
-						<option value="POST">POST</option>
-						<option value="GET">GET</option>
-					</select>
-				</div>
-				<div>
-					<label for="webhookHeaders" class="block text-sm font-medium text-gray-700"
-						>Headers (JSON)</label
-					>
-					<textarea
-						id="webhookHeaders"
-						bind:value={webhookHeaders}
-						rows={3}
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						placeholder={'{"Authorization": "Bearer token"}'}
-					></textarea>
-				</div>
-				<div>
-					<label for="webhookBodyTemplate" class="block text-sm font-medium text-gray-700"
-						>Body Template</label
-					>
-					<textarea
-						id="webhookBodyTemplate"
-						bind:value={webhookBodyTemplate}
-						rows={4}
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						placeholder={'{"monitor": "{{monitor_name}}", "status": "{{status}}"}'}
-					></textarea>
-					<p class="mt-1 text-xs text-gray-500">
-						Variables: {'{{monitor_name}}, {{status}}, {{url}}, {{error}}, {{timestamp}}'}
-					</p>
-				</div>
-			{:else if type === 'webpush'}
-				<div>
-					<label for="webpushLabel" class="block text-sm font-medium text-gray-700">Label</label>
-					<input
-						type="text"
-						id="webpushLabel"
-						bind:value={webpushLabel}
-						required
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						placeholder="e.g., Browser Notifications"
-					/>
-				</div>
-			{/if}
-
-			<div class="flex items-center">
-				<input
-					type="checkbox"
-					id="active"
-					bind:checked={active}
-					class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-				/>
-				<label for="active" class="ml-2 text-sm text-gray-700">Active</label>
-			</div>
-
-			<div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
+<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+<div
+	class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+	onclick={handleBackdropClick}
+>
+	<Card class="w-full max-w-lg" padding="lg">
+		{#snippet header()}
+			<div class="flex items-center justify-between">
+				<h2 class="text-lg font-semibold text-gray-900">
+					{channel ? 'Edit Channel' : 'Add Channel'}
+				</h2>
 				<button
 					type="button"
 					onclick={onClose}
-					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+					class="rounded-md p-1 text-gray-400 hover:text-gray-600"
 				>
-					Cancel
-				</button>
-				<button
-					type="submit"
-					disabled={saving}
-					class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-				>
-					{saving ? 'Saving...' : 'Save'}
+					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+					</svg>
 				</button>
 			</div>
+		{/snippet}
+
+		<form onsubmit={handleSubmit} class="space-y-4">
+			{#if error}
+				<Alert variant="error" dismissible ondismiss={() => (error = '')}>{error}</Alert>
+			{/if}
+
+			<Input
+				type="text"
+				name="name"
+				label="Name"
+				placeholder={namePlaceholder}
+				bind:value={name}
+				required
+			/>
+
+			{#if isWebpush}
+				<!-- Webpush channels are auto-created, show info instead of type selector -->
+				<div class="rounded-lg bg-blue-50 p-3">
+					<div class="flex items-center gap-2">
+						<svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+						</svg>
+						<span class="text-sm font-medium text-blue-800">Browser Push Notification</span>
+					</div>
+					<p class="mt-1 text-sm text-blue-700">
+						This channel was automatically created when push notifications were enabled in a browser.
+					</p>
+				</div>
+			{:else}
+				<Select
+					name="type"
+					label="Type"
+					options={typeOptions}
+					bind:value={type}
+					disabled={!!channel}
+				/>
+
+				{#if type === 'slack'}
+					<Input
+						type="url"
+						name="slackWebhookUrl"
+						label="Webhook URL"
+						placeholder="https://hooks.slack.com/services/..."
+						bind:value={slackWebhookUrl}
+						required
+					/>
+				{:else if type === 'discord'}
+					<Input
+						type="url"
+						name="discordWebhookUrl"
+						label="Webhook URL"
+						placeholder="https://discord.com/api/webhooks/..."
+						bind:value={discordWebhookUrl}
+						required
+					/>
+				{:else if type === 'webhook'}
+					<Input
+						type="url"
+						name="webhookUrl"
+						label="URL"
+						placeholder="https://example.com/webhook"
+						bind:value={webhookUrl}
+						required
+					/>
+					<Select
+						name="webhookMethod"
+						label="Method"
+						options={methodOptions}
+						bind:value={webhookMethod}
+					/>
+					<div>
+						<label for="webhookHeaders" class="block text-sm font-medium text-gray-700">Headers (JSON)</label>
+						<textarea
+							id="webhookHeaders"
+							bind:value={webhookHeaders}
+							rows={3}
+							class="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-0"
+							placeholder={'{"Authorization": "Bearer token"}'}
+						></textarea>
+					</div>
+				{/if}
+			{/if}
+
+			<div class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					id="channelActive"
+					bind:checked={active}
+					class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+				/>
+				<label for="channelActive" class="text-sm font-medium text-gray-700">Active</label>
+			</div>
+
+			<div class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
+				<Button type="button" variant="secondary" onclick={onClose}>
+					Cancel
+				</Button>
+				<Button type="submit" loading={saving}>
+					{saving ? 'Saving...' : 'Save'}
+				</Button>
+			</div>
 		</form>
-</Modal>
+	</Card>
+</div>

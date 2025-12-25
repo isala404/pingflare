@@ -9,7 +9,7 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 [[d1_databases]]
 binding = "DB"
 database_name = "pingflare-db"
-database_id = "74b11544-7a08-46b5-851c-8ec5ef153e70"
+database_id = "0d72f344-30dd-4b55-8b20-86448147439f"
 
 # KV Namespace for caching current status
 [[kv_namespaces]]

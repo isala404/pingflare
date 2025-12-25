@@ -18,7 +18,7 @@ export interface WebhookConfig {
 }
 
 export interface WebPushConfig {
-	label: string;
+	subscriptionId: string | null;
 }
 
 export type NotificationChannelConfig = SlackConfig | DiscordConfig | WebhookConfig | WebPushConfig;

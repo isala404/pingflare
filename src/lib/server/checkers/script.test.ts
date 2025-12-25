@@ -83,7 +83,7 @@ describe('validateScript', () => {
 		const script = JSON.stringify({ name: 'test' });
 		const result = validateScript(script);
 		expect(result.valid).toBe(false);
-		expect(result.error).toContain('fetch()');
+		expect(result.error).toContain('steps');
 	});
 
 	it('should return invalid for empty steps array', () => {
@@ -155,25 +155,5 @@ describe('validateScript', () => {
 			const result = validateScript(script);
 			expect(result.valid).toBe(true);
 		}
-	});
-
-	it('should handle legacy fetch() style scripts', () => {
-		const script = `
-			async function check(ctx) {
-				const response = await ctx.fetch('https://api.example.com/health');
-				return { status: 'up' };
-			}
-		`;
-		const result = validateScript(script);
-		expect(result.valid).toBe(true);
-	});
-
-	it('should extract URLs from legacy scripts', () => {
-		const script = `
-			fetch('https://api.example.com/endpoint1');
-			ctx.fetch('https://api.example.com/endpoint2');
-		`;
-		const result = validateScript(script);
-		expect(result.valid).toBe(true);
 	});
 });

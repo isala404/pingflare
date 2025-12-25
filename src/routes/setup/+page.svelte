@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { Container } from '$lib/components/layout';
+	import { Card, Input, Button, Alert } from '$lib/components/ui';
 
 	let name = $state('');
 	let email = $state('');
@@ -47,14 +49,13 @@
 				body: JSON.stringify({ name, email, password })
 			});
 
-			const data = (await response.json()) as { error?: string; success?: boolean };
+			const data = (await response.json()) as { error?: string };
 
 			if (!response.ok) {
 				error = data.error || 'Setup failed';
 				return;
 			}
 
-			// Redirect to dashboard
 			await goto(resolve('/'));
 		} catch {
 			error = 'An error occurred. Please try again.';
@@ -68,81 +69,71 @@
 	<title>Setup - Pingflare</title>
 </svelte:head>
 
-<div class="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-	<div class="w-full max-w-md space-y-8">
+<div class="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
+	<Container size="sm">
 		<div class="text-center">
-			<h1 class="text-3xl font-bold text-gray-900">Welcome to Pingflare</h1>
-			<p class="mt-2 text-gray-600">Create your admin account to get started</p>
+			<div class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white">
+				<svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+				</svg>
+			</div>
+			<h1 class="mt-4 text-2xl font-bold text-gray-900">Welcome to Pingflare</h1>
+			<p class="mt-1 text-gray-600">Create your admin account to get started</p>
 		</div>
 
-		<div class="rounded-lg bg-white p-8 shadow-md">
+		<Card class="mt-8" padding="lg">
 			{#if error}
-				<div class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
+				<div class="mb-4">
+					<Alert variant="error">{error}</Alert>
+				</div>
 			{/if}
 
-			<form onsubmit={handleSubmit} class="space-y-6">
-				<div>
-					<label for="name" class="block text-sm font-medium text-gray-700">Name</label>
-					<input
-						type="text"
-						id="name"
-						bind:value={name}
-						autocomplete="name"
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-						placeholder="Your name"
-					/>
-				</div>
+			<form onsubmit={handleSubmit} class="space-y-4">
+				<Input
+					type="text"
+					name="name"
+					label="Name"
+					placeholder="Your name"
+					bind:value={name}
+					required
+				/>
 
-				<div>
-					<label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-					<input
-						type="email"
-						id="email"
-						bind:value={email}
-						autocomplete="email"
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-						placeholder="admin@example.com"
-					/>
-				</div>
+				<Input
+					type="email"
+					name="email"
+					label="Email"
+					placeholder="admin@example.com"
+					bind:value={email}
+					required
+				/>
 
-				<div>
-					<label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-					<input
-						type="password"
-						id="password"
-						bind:value={password}
-						autocomplete="new-password"
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-						placeholder="Minimum 8 characters"
-					/>
-				</div>
+				<Input
+					type="password"
+					name="password"
+					label="Password"
+					placeholder="Minimum 8 characters"
+					helper="At least 8 characters"
+					bind:value={password}
+					required
+				/>
 
-				<div>
-					<label for="confirmPassword" class="block text-sm font-medium text-gray-700"
-						>Confirm Password</label
-					>
-					<input
-						type="password"
-						id="confirmPassword"
-						bind:value={confirmPassword}
-						autocomplete="new-password"
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-						placeholder="Confirm your password"
-					/>
-				</div>
+				<Input
+					type="password"
+					name="confirmPassword"
+					label="Confirm Password"
+					placeholder="Confirm your password"
+					bind:value={confirmPassword}
+					required
+				/>
 
-				<button
-					type="submit"
-					disabled={isSubmitting}
-					class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-				>
+				<Button type="submit" loading={isSubmitting} class="w-full">
 					{isSubmitting ? 'Creating Account...' : 'Create Admin Account'}
-				</button>
+				</Button>
 			</form>
-		</div>
+		</Card>
 
-		<p class="text-center text-sm text-gray-500">
+		<p class="mt-4 text-center text-sm text-gray-500">
 			This will be the only admin account. You can add more users later.
 		</p>
-	</div>
+	</Container>
 </div>

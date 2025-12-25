@@ -1,109 +1,110 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import type { MonitorWithStatus } from '$lib/types/monitor';
-	import { jsonToScript } from '$lib/types/script';
-	import StatusBadge from './StatusBadge.svelte';
+	import type { ScriptDSL } from '$lib/types/script';
+	import { Card, Badge, IconButton } from '$lib/components/ui';
+	import { formatTime, formatResponseTime, formatUptime } from '$lib/utils/format';
 
 	let {
 		monitor,
 		onDelete
 	}: {
 		monitor: MonitorWithStatus;
-		onDelete: (id: string) => void;
+		onDelete?: (id: string) => void;
 	} = $props();
 
-	function formatTime(isoString: string | null | undefined): string {
-		if (!isoString) return 'Never';
-		const date = new Date(isoString);
-		return date.toLocaleString();
-	}
+	// Tick state to force re-render of relative time every second
+	let tick = $state(0);
 
-	function formatResponseTime(ms: number | null | undefined): string {
-		if (ms === null || ms === undefined) return '-';
-		if (ms < 1000) return `${ms}ms`;
-		return `${(ms / 1000).toFixed(2)}s`;
-	}
+	$effect(() => {
+		const interval = setInterval(() => {
+			tick++;
+		}, 1000); // Update every second for accurate countdown
+		return () => clearInterval(interval);
+	});
 
-	function getScriptInfo(script: string | null): { stepCount: number; firstUrl: string } {
-		if (!script) return { stepCount: 0, firstUrl: '' };
-		const parsed = jsonToScript(script);
-		if (!parsed) return { stepCount: 0, firstUrl: '' };
-		const firstUrl = parsed.steps[0]?.request?.url ?? '';
-		return { stepCount: parsed.steps.length, firstUrl };
-	}
+	// Reactive relative time that updates with tick
+	const lastCheckTime = $derived.by(() => {
+		// Reference tick to trigger re-computation
+		void tick;
+		return formatTime(monitor.last_check?.checked_at ?? null);
+	});
 
-	let scriptInfo = $derived(getScriptInfo(monitor.script));
+	// Parse script to get step info
+	const scriptData = $derived.by(() => {
+		try {
+			const parsed = JSON.parse(monitor.script) as ScriptDSL;
+			return {
+				stepCount: parsed.steps?.length ?? 0,
+				firstUrl: parsed.steps?.[0]?.request?.url ?? ''
+			};
+		} catch {
+			return { stepCount: 0, firstUrl: '' };
+		}
+	});
+
+	function getDisplayUrl(url: string): string {
+		if (!url) return 'No URL';
+		try {
+			const parsed = new URL(url);
+			return parsed.host + (parsed.pathname !== '/' ? parsed.pathname : '');
+		} catch {
+			return url.length > 40 ? url.slice(0, 40) + '...' : url;
+		}
+	}
 </script>
 
-<div
-	class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
->
-	<div class="flex items-start justify-between">
-		<div class="flex-1">
+<Card class="transition-shadow hover:shadow-md">
+	<div class="flex items-start justify-between gap-3">
+		<div class="min-w-0 flex-1">
 			<div class="flex items-center gap-2">
-				<h3 class="text-lg font-semibold text-gray-900">{monitor.name}</h3>
-				<StatusBadge status={monitor.current_status} />
+				<h3 class="truncate text-lg font-semibold text-gray-900">
+					{monitor.name}
+				</h3>
+				<Badge status={monitor.current_status} />
 			</div>
-			<p class="mt-1 text-sm text-gray-500">
-				{scriptInfo.stepCount} step{scriptInfo.stepCount !== 1 ? 's' : ''}
-				{#if scriptInfo.firstUrl}
-					<span class="mx-1">&middot;</span>
-					<span class="max-w-xs truncate inline-block align-bottom">{scriptInfo.firstUrl}</span>
+
+			<p class="mt-1 truncate text-sm text-gray-500">
+				{getDisplayUrl(scriptData.firstUrl)}
+				{#if scriptData.stepCount > 1}
+					<span class="text-gray-400">+{scriptData.stepCount - 1} steps</span>
 				{/if}
 			</p>
 		</div>
-		<div class="flex gap-2">
-			<a
-				href={resolve(`/monitors/${monitor.id}/edit`)}
-				class="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-				title="Edit monitor"
-			>
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-					/>
-				</svg>
-			</a>
-			<button
-				onclick={() => onDelete(monitor.id)}
-				class="rounded-md p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
-				title="Delete monitor"
-			>
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-					/>
-				</svg>
-			</button>
+
+		<div class="flex shrink-0 items-center gap-1">
+			<IconButton
+				icon="edit"
+				href={`/monitors/${monitor.id}/edit`}
+				label="Edit monitor"
+			/>
+			{#if onDelete}
+				<IconButton
+					icon="delete"
+					onclick={() => onDelete(monitor.id)}
+					label="Delete monitor"
+				/>
+			{/if}
 		</div>
 	</div>
 
-	<div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+	<div class="mt-4 grid grid-cols-3 gap-2 border-t border-gray-100 pt-3 text-center">
 		<div>
-			<p class="text-gray-500">Response Time</p>
-			<p class="font-medium text-gray-900">
-				{formatResponseTime(monitor.last_check?.response_time_ms)}
+			<p class="text-xs text-gray-500">Uptime</p>
+			<p class="text-sm font-medium text-gray-900">
+				{formatUptime(monitor.uptime_24h)}
 			</p>
 		</div>
 		<div>
-			<p class="text-gray-500">Uptime (24h)</p>
-			<p class="font-medium text-gray-900">{monitor.uptime_24h?.toFixed(2) ?? '-'}%</p>
+			<p class="text-xs text-gray-500">Last Check</p>
+			<p class="text-sm font-medium text-gray-900">
+				{lastCheckTime}
+			</p>
 		</div>
 		<div>
-			<p class="text-gray-500">Last Check</p>
-			<p class="font-medium text-gray-900">{formatTime(monitor.last_check?.checked_at)}</p>
+			<p class="text-xs text-gray-500">Response</p>
+			<p class="text-sm font-medium text-gray-900">
+				{formatResponseTime(monitor.last_check?.response_time_ms ?? null)}
+			</p>
 		</div>
 	</div>
-
-	{#if monitor.last_check?.error_message}
-		<div class="mt-3 rounded-md bg-red-50 p-2">
-			<p class="text-sm text-red-700">{monitor.last_check.error_message}</p>
-		</div>
-	{/if}
-</div>
+</Card>

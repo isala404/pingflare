@@ -235,18 +235,18 @@
 				role="button"
 				tabindex="0"
 			>
-				<div class="flex items-center gap-3">
+				<div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
 					<span
-						class="flex h-6 w-6 items-center justify-center rounded bg-gray-100 text-xs font-medium text-gray-600"
+						class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-gray-100 text-xs font-medium text-gray-600"
 					>
 						{index + 1}
 					</span>
-					<span class="font-medium text-gray-900">{step.name || 'Unnamed Step'}</span>
-					<span class="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+					<span class="truncate font-medium text-gray-900">{step.name || 'Unnamed Step'}</span>
+					<span class="shrink-0 rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
 						{step.request.method}
 					</span>
 					{#if step.request.url}
-						<span class="max-w-xs truncate text-sm text-gray-500">{step.request.url}</span>
+						<span class="hidden truncate text-sm text-gray-500 sm:block">{step.request.url}</span>
 					{/if}
 				</div>
 				<div class="flex items-center gap-1">
@@ -329,7 +329,7 @@
 
 			{#if expandedSteps.has(index)}
 				<div class="border-t border-gray-200 p-4 space-y-4">
-					<div class="grid grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<div>
 							<label class="block text-sm font-medium text-gray-700">Step Name</label>
 							<input
@@ -376,39 +376,42 @@
 						{#if step.request.headers && Object.keys(step.request.headers).length > 0}
 							<div class="mt-2 space-y-2">
 								{#each Object.entries(step.request.headers) as [key, value] (key)}
-									<div class="flex gap-2">
+									<div class="flex flex-col gap-2 sm:flex-row">
 										<input
 											type="text"
 											value={key}
 											onchange={(e) =>
 												updateHeaderKey(step, key, (e.target as HTMLInputElement).value)}
-											class="block w-1/3 rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+											class="block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-1/3"
 											placeholder="Header name"
 										/>
-										<input
-											type="text"
-											{value}
-											oninput={(e) => {
-												step.request.headers![key] = (e.target as HTMLInputElement).value;
-												script.steps = [...script.steps];
-											}}
-											class="block flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-											placeholder={`Value (use \${var} for variables)`}
-										/>
-										<button
-											type="button"
-											onclick={() => removeHeader(step, key)}
-											class="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-										>
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18L18 6M6 6l12 12"
-												/>
-											</svg>
-										</button>
+										<div class="flex flex-1 gap-2">
+											<input
+												type="text"
+												{value}
+												oninput={(e) => {
+													step.request.headers![key] = (e.target as HTMLInputElement).value;
+													script.steps = [...script.steps];
+												}}
+												class="block flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+												placeholder={`Value (use \${var} for variables)`}
+											/>
+											<button
+												type="button"
+												onclick={() => removeHeader(step, key)}
+												class="shrink-0 rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+												aria-label="Remove header"
+											>
+												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M6 18L18 6M6 6l12 12"
+													/>
+												</svg>
+											</button>
+										</div>
 									</div>
 								{/each}
 							</div>
@@ -452,39 +455,42 @@
 						{#if step.extract && Object.keys(step.extract).length > 0}
 							<div class="mt-2 space-y-2">
 								{#each Object.entries(step.extract) as [varName, path] (varName)}
-									<div class="flex gap-2">
+									<div class="flex flex-col gap-2 sm:flex-row">
 										<input
 											type="text"
 											value={varName}
 											onchange={(e) =>
 												updateExtractKey(step, varName, (e.target as HTMLInputElement).value)}
-											class="block w-1/3 rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+											class="block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-1/3"
 											placeholder="Variable name"
 										/>
-										<input
-											type="text"
-											value={path}
-											oninput={(e) => {
-												step.extract![varName] = (e.target as HTMLInputElement).value;
-												script.steps = [...script.steps];
-											}}
-											class="block flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-											placeholder="json.data.token"
-										/>
-										<button
-											type="button"
-											onclick={() => removeExtract(step, varName)}
-											class="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-										>
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18L18 6M6 6l12 12"
-												/>
-											</svg>
-										</button>
+										<div class="flex flex-1 gap-2">
+											<input
+												type="text"
+												value={path}
+												oninput={(e) => {
+													step.extract![varName] = (e.target as HTMLInputElement).value;
+													script.steps = [...script.steps];
+												}}
+												class="block flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+												placeholder="json.data.token"
+											/>
+											<button
+												type="button"
+												onclick={() => removeExtract(step, varName)}
+												class="shrink-0 rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+												aria-label="Remove variable"
+											>
+												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M6 18L18 6M6 6l12 12"
+													/>
+												</svg>
+											</button>
+										</div>
 									</div>
 								{/each}
 							</div>
@@ -504,59 +510,62 @@
 						</div>
 						<p class="text-xs text-gray-500 mt-1">Validate response values</p>
 						{#if step.assert && step.assert.length > 0}
-							<div class="mt-2 space-y-2">
+							<div class="mt-2 space-y-3">
 								{#each step.assert as assertion, assertIndex (assertIndex)}
-									<div class="flex gap-2 items-center">
-										<input
-											type="text"
-											bind:value={assertion.check}
-											class="block w-1/4 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-											placeholder="status, json.id"
-										/>
-										<select
-											value={getAssertionOperator(assertion)}
-											onchange={(e) =>
-												updateAssertionOperator(assertion, (e.target as HTMLSelectElement).value)}
-											class="block w-1/4 rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-										>
-											{#each assertionOperators as op (op.value)}
-												<option value={op.value}>{op.label}</option>
-											{/each}
-										</select>
-										{#if getAssertionOperator(assertion) !== 'exists'}
+									<div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+										<div class="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2">
 											<input
 												type="text"
-												value={getAssertionValue(assertion)}
-												oninput={(e) =>
-													setAssertionValue(assertion, (e.target as HTMLInputElement).value)}
-												class="block flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-												placeholder="Expected value"
+												bind:value={assertion.check}
+												class="col-span-2 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-1/4"
+												placeholder="status, json.id"
 											/>
-										{:else}
 											<select
-												value={getAssertionValue(assertion)}
+												value={getAssertionOperator(assertion)}
 												onchange={(e) =>
-													setAssertionValue(assertion, (e.target as HTMLSelectElement).value)}
-												class="block flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+													updateAssertionOperator(assertion, (e.target as HTMLSelectElement).value)}
+												class="block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-1/4"
 											>
-												<option value="true">Should Exist</option>
-												<option value="false">Should Not Exist</option>
+												{#each assertionOperators as op (op.value)}
+													<option value={op.value}>{op.label}</option>
+												{/each}
 											</select>
-										{/if}
-										<button
-											type="button"
-											onclick={() => removeAssertion(step, assertIndex)}
-											class="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-										>
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18L18 6M6 6l12 12"
+											{#if getAssertionOperator(assertion) !== 'exists'}
+												<input
+													type="text"
+													value={getAssertionValue(assertion)}
+													oninput={(e) =>
+														setAssertionValue(assertion, (e.target as HTMLInputElement).value)}
+													class="block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:flex-1"
+													placeholder="Expected value"
 												/>
-											</svg>
-										</button>
+											{:else}
+												<select
+													value={getAssertionValue(assertion)}
+													onchange={(e) =>
+														setAssertionValue(assertion, (e.target as HTMLSelectElement).value)}
+													class="block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:flex-1"
+												>
+													<option value="true">Should Exist</option>
+													<option value="false">Should Not Exist</option>
+												</select>
+											{/if}
+											<button
+												type="button"
+												onclick={() => removeAssertion(step, assertIndex)}
+												class="justify-self-end rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 sm:shrink-0"
+												aria-label="Remove assertion"
+											>
+												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M6 18L18 6M6 6l12 12"
+													/>
+												</svg>
+											</button>
+										</div>
 									</div>
 								{/each}
 							</div>

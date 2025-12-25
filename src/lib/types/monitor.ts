@@ -7,7 +7,6 @@ export interface Monitor {
 	script: string;
 	interval_seconds: number;
 	timeout_ms: number;
-	retry_count: number;
 	active: number;
 	created_at: string;
 	updated_at: string;
@@ -39,7 +38,6 @@ export interface CreateMonitorInput {
 	script: string;
 	interval_seconds?: number;
 	timeout_ms?: number;
-	retry_count?: number;
 	active?: boolean;
 }
 

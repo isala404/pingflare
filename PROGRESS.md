@@ -134,3 +134,54 @@ Implemented multi-channel notification system with Slack, Discord, Webhook, and 
 - Updated MonitorForm.svelte: Integrated notification config section
 - Updated src/routes/api/cron/+server.ts: Triggers notifications on status changes
 - TODO: Full downtime threshold enforcement with incident tracking integration
+
+Full UI refactor with component library and mobile responsiveness.
+
+- Consolidated 5 migrations into single migrations/0001_schema.sql
+- Removed legacy monitor columns (type, url, hostname, port, method, expected_status, keyword, keyword_type, retry_count)
+- Removed legacy script parser extractLegacyUrls(), JSON DSL only now
+- Created UI component library in src/lib/components/ui/ (Button, Input, Select, Textarea, Card, Alert, Badge, Spinner, IconButton)
+- Created layout components in src/lib/components/layout/ (AppShell, Header, BottomNav, PageHeader, Container)
+- Mobile-first design: bottom nav for mobile (md:hidden), desktop header with nav
+- All pages refactored to use new components and AppShell layout
+- Created src/lib/utils/format.ts for formatDuration, formatTime, formatResponseTime, formatUptime
+- Deleted StatusBadge.svelte, Modal.svelte (replaced by new components)
+- All 11 tests pass, lint clean, build succeeds
+
+Fixed UI bugs and improved mobile responsiveness.
+
+- Recreated MonitorCard.svelte (was accidentally emptied during previous refactor)
+- Fixed ScriptBuilder.svelte mobile layout: headers, extract variables, and assertions now stack on mobile
+- Added href support to IconButton component for link-style icon buttons
+- Fixed Settings page data loading on first login with $effect() sync
+- Moved PushNotificationToggle from dashboard to notifications page
+- Simplified notification form: removed webpush label field (uses name), removed body template from webhook
+- Added dynamic name placeholder based on notification channel type
+- Updated user type to accept null in AppShell/Header components
+- Added autocomplete prop to Input component for password fields
+- Removed resolve() usage from navigation (app has no base path)
+- Disabled svelte/no-navigation-without-resolve lint rule in eslint.config.js
+
+Fixed relative time updates and notification channel button UX.
+
+- MonitorCard: Added $effect with setInterval to update relative time every minute
+- NotificationChannelCard: Added loading state with spinner for Test button
+- Button component: Added cursor-pointer to base styles for proper hover indication
+- Updated webpush config preview to show "Browser Push" instead of label field
+
+Fixed timezone conversion and redesigned webpush channel UX.
+
+- src/lib/utils/format.ts: formatTime now normalizes SQLite timestamps (adds T separator and Z suffix for UTC)
+- src/routes/api/push/subscribe/+server.ts: Auto-creates notification channel when browser push is enabled with browser-specific name
+- src/lib/components/NotificationChannelForm.svelte: Removed webpush from Add Channel dropdown, shows info box when editing webpush channels
+- src/lib/types/notification.ts: WebPushConfig now stores subscriptionId linking channel to push subscription
+- Webpush channels can only be created by enabling browser notifications, but can still be edited/renamed
+
+Enhanced time display and browser push UX.
+
+- src/lib/utils/format.ts: formatTime now shows seconds (<2min), minutes (<1h), hours+minutes (<1d), days+hours (>=1d)
+- src/lib/components/MonitorCard.svelte: Timer now updates every second for accurate countdown
+- src/lib/components/PushNotificationToggle.svelte: Added getBrowserName/getPlatformName functions for smart channel naming (e.g., "Chrome - macOS")
+- PushNotificationToggle now accepts onSubscriptionChange callback to notify parent when push enabled/disabled
+- src/routes/notifications/+page.svelte: Passes loadChannels to PushNotificationToggle so channel list updates immediately
+- Deployed to https://pingflare.pages.dev

@@ -1,14 +1,26 @@
 <script lang="ts">
 	import type { NotificationChannel, NotificationChannelType } from '$lib/types/notification';
+	import { Card, Badge, Button } from '$lib/components/ui';
 
 	interface Props {
 		channel: NotificationChannel;
 		onEdit: () => void;
 		onDelete: () => void;
-		onTest: () => void;
+		onTest: () => Promise<void> | void;
 	}
 
 	let { channel, onEdit, onDelete, onTest }: Props = $props();
+
+	let testing = $state(false);
+
+	async function handleTest() {
+		testing = true;
+		try {
+			await onTest();
+		} finally {
+			testing = false;
+		}
+	}
 
 	const typeLabels: Record<NotificationChannelType, string> = {
 		slack: 'Slack',
@@ -42,62 +54,41 @@
 			return `${cfg.method ?? 'POST'} ${cfg.url ?? ''}`.substring(0, 40);
 		}
 		if (channel.type === 'webpush') {
-			return cfg.label ?? 'Browser Push';
+			return 'Browser Push';
 		}
 		return '';
 	}
 </script>
 
-<div class="rounded-lg bg-white p-4 shadow-sm">
-	<div class="flex items-start justify-between">
-		<div class="flex items-center gap-3">
+<Card>
+	<div class="flex items-start justify-between gap-4">
+		<div class="flex items-center gap-3 min-w-0">
 			<span
-				class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-lg font-semibold {typeColors[
-					channel.type
-				]}"
+				class="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-lg font-semibold {typeColors[channel.type]}"
 			>
 				{channel.type.charAt(0).toUpperCase()}
 			</span>
-			<div>
-				<h3 class="font-medium text-gray-900">{channel.name}</h3>
-				<div class="flex items-center gap-2">
+			<div class="min-w-0">
+				<h3 class="font-medium text-gray-900 truncate">{channel.name}</h3>
+				<div class="flex flex-wrap items-center gap-2 mt-1">
 					<span
-						class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {typeColors[
-							channel.type
-						]}"
+						class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {typeColors[channel.type]}"
 					>
 						{typeLabels[channel.type]}
 					</span>
 					{#if !channel.active}
-						<span
-							class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
-						>
-							Disabled
-						</span>
+						<Badge variant="neutral">Disabled</Badge>
 					{/if}
 				</div>
 			</div>
 		</div>
-		<div class="flex items-center gap-2">
-			<button
-				onclick={onTest}
-				class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-			>
-				Test
-			</button>
-			<button
-				onclick={onEdit}
-				class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-			>
-				Edit
-			</button>
-			<button
-				onclick={onDelete}
-				class="rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
-			>
-				Delete
-			</button>
+		<div class="flex flex-shrink-0 flex-wrap items-center gap-2">
+			<Button size="sm" variant="secondary" onclick={handleTest} loading={testing}>
+				{testing ? 'Testing...' : 'Test'}
+			</Button>
+			<Button size="sm" variant="secondary" onclick={onEdit}>Edit</Button>
+			<Button size="sm" variant="danger" onclick={onDelete}>Delete</Button>
 		</div>
 	</div>
-	<p class="mt-2 truncate text-sm text-gray-500">{getConfigPreview()}</p>
-</div>
+	<p class="mt-3 truncate text-sm text-gray-500">{getConfigPreview()}</p>
+</Card>

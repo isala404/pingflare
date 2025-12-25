@@ -26,27 +26,30 @@ Project Context
 
 Cloudflare Resources
 
-- D1 Database: pingflare-db (74b11544-7a08-46b5-851c-8ec5ef153e70)
+- D1 Database: pingflare-db (0d72f344-30dd-4b55-8b20-86448147439f)
 - KV Namespace: STATUS_CACHE (bcb87ba93beb493bad285feff7362a2e)
 - Pages Project: pingflare
 
 Directory Structure
 
-- src/lib/components/ - Svelte components (MonitorCard, MonitorForm, Modal, StatusBadge, ReloadPrompt, ScriptBuilder, ScriptEditor)
+- src/lib/components/ - Svelte components (MonitorCard, MonitorForm, ScriptBuilder, ScriptEditor, NotificationChannelCard, NotificationChannelForm, etc.)
+- src/lib/components/ui/ - UI primitives (Button, Input, Select, Textarea, Card, Alert, Badge, Spinner, IconButton)
+- src/lib/components/layout/ - Layout components (AppShell, Header, BottomNav, PageHeader, Container)
+- src/lib/utils/ - Utility functions (format.ts)
 - src/lib/server/checkers/ - Health check implementations (script.ts executor, index.ts orchestrator)
 - src/lib/server/db/ - Database operations (monitors.ts, auth.ts, notifications.ts)
 - src/lib/server/notifications/ - Notification senders (slack.ts, discord.ts, webhook.ts, webpush.ts, index.ts)
 - src/lib/server/cache.ts - KV caching layer
-- src/lib/types/ - TypeScript interfaces (monitor.ts, auth.ts, script.ts)
-- src/routes/ - SvelteKit pages (dashboard, /login, /setup, /settings, /monitors/new, /monitors/[id]/edit)
+- src/lib/types/ - TypeScript interfaces (monitor.ts, auth.ts, script.ts, notification.ts)
+- src/routes/ - SvelteKit pages (dashboard, /login, /setup, /settings, /monitors/new, /monitors/[id]/edit, /notifications)
 - src/routes/api/ - REST API endpoints
 - src/hooks.server.ts - Auth middleware, route protection
 - workers/scheduler/ - Separate Worker for cron triggers
-- migrations/ - D1 SQL migrations (0001-0004)
+- migrations/ - D1 SQL migrations (single 0001_schema.sql)
 
 Database Schema
 
-- monitors: id, name, type, url, hostname, port, method, expected_status, keyword, keyword_type, interval_seconds, timeout_ms, retry_count, active, script, created_at, updated_at
+- monitors: id, name, interval_seconds, timeout_ms, active, script (JSON DSL), created_at, updated_at
 - checks: id, monitor_id (FK), status, response_time_ms, status_code, error_message, checked_at, checked_from
 - incidents: id, monitor_id (FK), status (ongoing/resolved), started_at, resolved_at, duration_seconds, notified_channels (JSON)
 - notification_channels: id, type (webhook/slack/discord/webpush), name, config (JSON), active, created_at
@@ -147,11 +150,30 @@ Architectural Constraints
 - Workers can make outbound TCP connections via connect() API from cloudflare:sockets
 - Free tier: 100k requests/day, 10ms CPU/request, 1GB KV storage
 
+UI Component Library
+
+- Button: variants (primary/secondary/danger/ghost), sizes (sm/md/lg), loading state, href support
+- Input: types (text/email/password/number/url), label, error, helper text
+- Select: dropdown with label and error
+- Textarea: with label, error, monospace option
+- Card: container with optional header/footer snippets, padding sizes
+- Alert: variants (error/success/warning/info), dismissible
+- Badge: status indicators, maps MonitorStatus to colors
+- Spinner: loading indicator, sizes (sm/md/lg)
+- IconButton: icons (edit/delete/add/chevron-up/chevron-down/close/back/menu/check/refresh)
+
+Layout Components
+
+- AppShell: combines Header (desktop) + content + BottomNav (mobile)
+- Header: desktop header with logo, nav links, user menu, logout
+- BottomNav: fixed bottom nav for mobile with 4 items (Dashboard/Add/Alerts/Settings)
+- PageHeader: title, optional subtitle, back button, actions snippet
+- Container: max-width wrapper with sizes (sm/md/lg/xl/full)
+
 Not Yet Implemented
 
 - Email and Telegram notification channels
 - TCP/DNS checkers (scaffolded)
-- Retry logic (retry_count field unused)
 - Downtime threshold enforcement per channel (schema ready, cron not fully integrated)
 
 User Preferences
