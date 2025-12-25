@@ -1,6 +1,7 @@
 {
 	"name": "pingflare",
 	"version": "0.0.1",
+	"description": "Cloudflare-native uptime monitoring solution with public status pages",
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20251202.0",
 		"esbuild": "^0.24.0",
@@ -38,7 +39,8 @@
 		"build:sveltekit": "vite build",
 		"build:worker": "node scripts/build-worker.js",
 		"preview": "vite preview",
-		"deploy": "wrangler deploy",
+		"deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy",
+		"db:migrations:apply": "wrangler d1 migrations apply DB --remote",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -50,5 +52,12 @@
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"
 	},
-	"type": "module"
+	"type": "module",
+	"cloudflare": {
+		"bindings": {
+			"DB": {
+				"description": "D1 database for storing monitors, health check results, users, and incidents. Created automatically during deployment."
+			}
+		}
+	}
 }

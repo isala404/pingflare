@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getAllMonitors, getLastCheck, getUptime24h } from '$lib/server/db/monitors';
-import type { StatusCacheEntry } from '$lib/types/monitor';
+import type { StatusResponse } from '$lib/types/monitor';
 
 // KV caching disabled to stay within free tier limits
 // D1 queries are fast enough for small-scale monitoring
@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ platform }) => {
 	}
 
 	const monitors = await getAllMonitors(db);
-	const statuses: StatusCacheEntry[] = await Promise.all(
+	const statuses: StatusResponse[] = await Promise.all(
 		monitors.map(async (monitor) => {
 			const lastCheck = await getLastCheck(db, monitor.id);
 			const uptime24h = await getUptime24h(db, monitor.id);

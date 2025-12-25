@@ -33,10 +33,9 @@
 	let saving = $state(false);
 	let error = $state('');
 
-	// For new channels, exclude webpush (it's auto-created when enabling browser notifications)
 	// For editing existing webpush channels, we still show the form
+	// (webpush is auto-created when enabling browser notifications)
 	const isWebpush = $derived(channel?.type === 'webpush');
-	const isNewChannel = $derived(!channel);
 
 	const typeOptions = [
 		{ value: 'slack', label: 'Slack' },

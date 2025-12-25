@@ -1,4 +1,5 @@
-import type { Monitor, MonitorStatus, Incident } from '$lib/types/monitor';
+import type { Monitor, MonitorStatus } from '$lib/types/monitor';
+import type { Incident } from '$lib/types/status';
 import type {
 	NotificationChannel,
 	NotificationPayload,
@@ -80,7 +81,7 @@ function shouldNotify(
 
 	if (newStatus === 'down' && channel.downtime_threshold_s > 0 && incident) {
 		const downtimeSeconds = Math.floor(
-			(Date.now() - new Date(incident.started_at).getTime()) / 1000
+			(Date.now() - new Date(incident.created_at).getTime()) / 1000
 		);
 		if (downtimeSeconds < channel.downtime_threshold_s) {
 			return false;
@@ -115,7 +116,12 @@ function buildPayload(
 		responseTimeMs: null,
 		errorMessage: null,
 		timestamp: new Date().toISOString(),
-		incidentDuration: incident?.duration_seconds ?? null
+		incidentDuration: incident?.resolved_at
+			? Math.floor(
+					(new Date(incident.resolved_at).getTime() - new Date(incident.created_at).getTime()) /
+						1000
+				)
+			: null
 	};
 }
 

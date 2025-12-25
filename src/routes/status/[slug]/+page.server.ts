@@ -1,9 +1,8 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { getGroupWithStatusBySlug } from '$lib/server/db/groups';
-import { getActiveIncidents, getRecentIncidentsByDate } from '$lib/server/db/status';
-import type { Incident, IncidentsByDate } from '$lib/types/status';
-import type { GroupWithStatus } from '$lib/types/group';
+import type { Incident, IncidentsByDate, IncidentUpdate } from '$lib/types/status';
+import type { D1Database } from '@cloudflare/workers-types';
 
 export const load: PageServerLoad = async ({ params, platform }) => {
 	if (!platform?.env?.DB) {
@@ -120,6 +119,3 @@ async function getRecentIncidentsByDateForGroup(
 
 	return result;
 }
-
-import type { D1Database } from '@cloudflare/workers-types';
-import type { IncidentUpdate } from '$lib/types/status';

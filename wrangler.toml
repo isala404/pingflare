@@ -1,6 +1,6 @@
 name = "pingflare"
 main = "dist/_worker.js"
-compatibility_date = "2024-12-01"
+compatibility_date = "2025-11-17"
 compatibility_flags = ["nodejs_compat"]
 
 # Workers Static Assets
@@ -11,7 +11,8 @@ directory = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "pingflare-db"
-database_id = "f53140e2-d3ea-4d34-b6f6-92db167c64d9"
+database_id = "pingflare-db"
+migrations_dir = "migrations"
 
 # Cron triggers - runs health checks every minute
 [triggers]

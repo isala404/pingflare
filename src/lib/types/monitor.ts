@@ -1,5 +1,4 @@
 export type MonitorStatus = 'up' | 'down' | 'degraded';
-export type IncidentStatus = 'ongoing' | 'resolved';
 
 export interface Monitor {
 	id: string;
@@ -24,16 +23,6 @@ export interface Check {
 	checked_from: string | null;
 }
 
-export interface Incident {
-	id: number;
-	monitor_id: string;
-	status: IncidentStatus;
-	started_at: string;
-	resolved_at: string | null;
-	duration_seconds: number | null;
-	notified_channels: string;
-}
-
 export interface CreateMonitorInput {
 	name: string;
 	script: string;
@@ -53,7 +42,7 @@ export interface MonitorWithStatus extends Monitor {
 	uptime_24h: number | null;
 }
 
-export interface StatusCacheEntry {
+export interface StatusResponse {
 	monitor_id: string;
 	status: MonitorStatus;
 	response_time_ms: number | null;

@@ -53,14 +53,14 @@ export interface AuthState {
 	user: UserPublic | null;
 }
 
-export const ROLE_PERMISSIONS = {
+export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
 	admin: ['read', 'write', 'delete', 'manage_users'],
 	editor: ['read', 'write', 'delete'],
 	viewer: ['read']
-} as const;
+};
 
 export type Permission = 'read' | 'write' | 'delete' | 'manage_users';
 
 export function hasPermission(role: UserRole, permission: Permission): boolean {
-	return ROLE_PERMISSIONS[role].includes(permission as never);
+	return ROLE_PERMISSIONS[role].includes(permission);
 }

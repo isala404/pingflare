@@ -280,7 +280,7 @@ Enabled Cloudflare Deploy Button by converting from Pages to Workers deployment.
 - Created .dev.vars.example: Empty secrets template for deploy button
 - Rewrote README.md: Added deploy button, feature list, architecture docs
 - Deleted workers/scheduler/: Merged cron handler into main worker
-- Build output: dist/_worker.js + static assets
+- Build output: dist/\_worker.js + static assets
 - Deploy button provisions D1 and configures cron automatically
 
 Fixed adapter-cloudflare conflict with dual wrangler config approach.
@@ -306,3 +306,20 @@ Consolidated migrations and removed backward compatibility code.
 - Cleaned up monitor new/edit pages to not pass is_public
 - Deleted migrations 0002-0005 (status_announcements, check_aggregates tables not used)
 - Updated MEMORIES.md with correct schema and removed KV references
+
+Cleaned up legacy code and unused types.
+
+- Removed unused imports in src/routes/status/[slug]/+page.server.ts (getActiveIncidents, getRecentIncidentsByDate, GroupWithStatus)
+- Removed unused isNewChannel variable in src/lib/components/NotificationChannelForm.svelte
+- Removed legacy IncidentStatus type ('ongoing' | 'resolved') from src/lib/types/monitor.ts (unused, superseded by status.ts version)
+- Removed legacy Incident interface from src/lib/types/monitor.ts (had started_at, duration_seconds, notified_channels - all unused fields)
+- Updated src/lib/server/notifications/index.ts to import Incident from status.ts, use created_at and calculate duration from resolved_at
+- Renamed StatusCacheEntry to StatusResponse in src/lib/types/monitor.ts and src/routes/api/status/+server.ts (KV cache removed, name was misleading)
+- Fixed 'as never' type cast in src/lib/types/auth.ts with proper Record<UserRole, readonly Permission[]> typing
+
+Optimized Deploy to Cloudflare button support with D1 migrations and cron scheduling.
+
+- Updated wrangler.toml: Added migrations_dir for automatic D1 migration discovery
+- Updated package.json deploy script: Runs D1 migrations before wrangler deploy
+- Added cloudflare.bindings description in package.json for deploy button UI
+- Rewrote README.md: Comprehensive documentation with deploy button, features, architecture, usage guide, DSL reference
