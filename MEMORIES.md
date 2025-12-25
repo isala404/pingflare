@@ -49,9 +49,12 @@ Directory Structure
 
 Database Schema
 
-- monitors: id, name, interval_seconds, timeout_ms, active, script (JSON DSL), created_at, updated_at
+- monitor_groups: id, name, description, display_order, created_at
+- monitors: id, name, group_id (FK), interval_seconds, timeout_ms, active, is_public, script (JSON DSL), created_at, updated_at
 - checks: id, monitor_id (FK), status, response_time_ms, status_code, error_message, checked_at, checked_from
-- incidents: id, monitor_id (FK), status (ongoing/resolved), started_at, resolved_at, duration_seconds, notified_channels (JSON)
+- incidents: id, title, status, group_id (FK), created_at, resolved_at
+- incident_updates: id, incident_id (FK), status, message, created_at
+- daily_status: monitor_id, date, status, downtime_minutes
 - notification_channels: id, type (webhook/slack/discord/webpush), name, config (JSON), active, created_at
 - monitor_notifications: monitor_id, channel_id, notify_on (CSV), downtime_threshold_s (junction table)
 - push_subscriptions: id, endpoint (unique), p256dh, auth, user_agent, created_at
@@ -65,6 +68,10 @@ API Endpoints
 - GET/PUT/DELETE /api/monitors/[id] - Single monitor CRUD
 - GET /api/cron - Trigger health checks (manual or cron)
 - GET /api/status - Fast status from KV cache (public)
+- GET/POST /api/groups - List/create monitor groups
+- GET/PUT/DELETE /api/groups/[id] - Single group CRUD
+- GET/POST /api/incidents - List/create incidents (requires group_id)
+- GET/POST/DELETE /api/incidents/[id] - Single incident operations
 - GET /api/auth/status - Check setup state and current user
 - POST /api/auth/setup - Create initial admin (name, email, password)
 - POST /api/auth/login - Email/password authentication

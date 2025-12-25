@@ -26,6 +26,11 @@
 	const navItems: NavItem[] = [
 		{ href: '/', label: 'Dashboard', match: (path) => path === '/' },
 		{
+			href: '/admin/status',
+			label: 'Status',
+			match: (path) => path.startsWith('/admin/status') || path.startsWith('/announcements')
+		},
+		{
 			href: '/notifications',
 			label: 'Notifications',
 			match: (path) => path.startsWith('/notifications')

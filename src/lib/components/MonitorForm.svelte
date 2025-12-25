@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { MonitorWithStatus } from '$lib/types/monitor';
+	import type { MonitorGroup } from '$lib/types/group';
 	import type { ScriptDSL } from '$lib/types/script';
 	import type { NotificationChannel, MonitorNotificationInput } from '$lib/types/notification';
 	import { getDefaultScript, scriptToJson, jsonToScript } from '$lib/types/script';
@@ -11,10 +12,12 @@
 
 	let {
 		monitor = null,
+		groups = [],
 		onSave,
 		onCancel
 	}: {
 		monitor?: MonitorWithStatus | null;
+		groups?: MonitorGroup[];
 		onSave: (data: FormData) => void;
 		onCancel: () => void;
 	} = $props();
@@ -29,6 +32,7 @@
 	}
 
 	let name = $state(monitor?.name ?? '');
+	let groupId = $state(monitor?.group_id ?? (groups.length > 0 ? groups[0].id : ''));
 	let intervalSeconds = $state(monitor?.interval_seconds?.toString() ?? '60');
 	let timeoutMs = $state(monitor?.timeout_ms?.toString() ?? '30000');
 	let active = $state(monitor?.active !== 0);
@@ -187,6 +191,7 @@ Requirement:
 
 		const formData = new FormData();
 		formData.set('name', name.trim());
+		formData.set('group_id', groupId);
 		formData.set('script', finalScript);
 		formData.set('interval_seconds', intervalSeconds);
 		formData.set('timeout_ms', timeoutMs);
@@ -206,7 +211,7 @@ Requirement:
 		}
 	}
 
-	let canSave = $derived(name.trim() && isScriptValid && !codeError);
+	let canSave = $derived(name.trim() && groupId && isScriptValid && !codeError);
 </script>
 
 <form onsubmit={handleSubmit} class="space-y-4">
@@ -222,6 +227,23 @@ Requirement:
 		bind:value={name}
 		required
 	/>
+
+	<div>
+		<label for="groupId" class="block text-sm font-medium text-gray-700">Group</label>
+		<select
+			id="groupId"
+			bind:value={groupId}
+			class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+			required
+		>
+			{#each groups as group}
+				<option value={group.id}>{group.name}</option>
+			{/each}
+		</select>
+		{#if groups.length === 0}
+			<p class="mt-1 text-sm text-red-500">No groups available. <a href="/admin/groups" class="underline">Create a group first.</a></p>
+		{/if}
+	</div>
 
 	<div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
 		<div class="mb-4 flex flex-wrap items-center justify-between gap-2">

@@ -1,8 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getActiveMonitors, insertCheck, getLastCheck } from '$lib/server/db/monitors';
+import { getActiveMonitors, insertCheck, getLastCheck, cleanupOldChecks } from '$lib/server/db/monitors';
 import { runCheck } from '$lib/server/checkers';
 import { sendNotifications } from '$lib/server/notifications';
+import { aggregateDailyStatus, cleanupOldDailyStatus } from '$lib/server/db/status';
 import type { MonitorStatus } from '$lib/types/monitor';
 
 // KV caching disabled to stay within free tier limits (1000 puts/day)
@@ -69,6 +70,19 @@ export const GET: RequestHandler = async ({ platform }) => {
 		}
 		return { error: r.reason?.message || 'Unknown error' };
 	});
+
+	// Run daily aggregation and cleanup at midnight (hour 0, minute 0-5)
+	const now = new Date();
+	if (now.getHours() === 0 && now.getMinutes() <= 5) {
+		try {
+			await aggregateDailyStatus(db);
+			// Clean up old raw checks (keep 7 days) and old daily status (keep 365 days)
+			await cleanupOldChecks(db, 7);
+			await cleanupOldDailyStatus(db, 365);
+		} catch (err) {
+			console.error('Failed to run aggregation/cleanup:', err);
+		}
+	}
 
 	return json({
 		message: 'Checks completed',

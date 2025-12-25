@@ -19,6 +19,7 @@
 		try {
 			const monitorData: CreateMonitorInput = {
 				name: formData.get('name') as string,
+				group_id: formData.get('group_id') as string,
 				script: formData.get('script') as string,
 				interval_seconds: formData.get('interval_seconds')
 					? parseInt(formData.get('interval_seconds') as string, 10)
@@ -26,7 +27,8 @@
 				timeout_ms: formData.get('timeout_ms')
 					? parseInt(formData.get('timeout_ms') as string, 10)
 					: undefined,
-				active: formData.get('active') === '1'
+				active: formData.get('active') === '1',
+				is_public: formData.get('is_public') === '1'
 			};
 
 			const response = await fetch('/api/monitors', {
@@ -68,7 +70,7 @@
 		{/if}
 
 		<Card padding="lg">
-			<MonitorForm onSave={handleSave} onCancel={handleCancel} />
+			<MonitorForm groups={data.groups} onSave={handleSave} onCancel={handleCancel} />
 		</Card>
 
 		{#if saving}

@@ -3,7 +3,7 @@
 	import type { MonitorStatus } from '$lib/types/monitor';
 
 	type BadgeVariant = 'success' | 'error' | 'warning' | 'info' | 'neutral';
-	type BadgeSize = 'sm' | 'md';
+	type BadgeSize = 'sm' | 'md' | 'lg';
 
 	let {
 		variant = 'neutral',
@@ -38,7 +38,8 @@
 
 	const sizeStyles: Record<BadgeSize, string> = {
 		sm: 'px-2 py-0.5 text-xs',
-		md: 'px-2.5 py-1 text-sm'
+		md: 'px-2.5 py-1 text-sm',
+		lg: 'px-3 py-1.5 text-base'
 	};
 
 	const computedStyles = $derived(

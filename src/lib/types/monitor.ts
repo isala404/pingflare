@@ -8,6 +8,8 @@ export interface Monitor {
 	interval_seconds: number;
 	timeout_ms: number;
 	active: number;
+	is_public: number;
+	group_id: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -36,9 +38,11 @@ export interface Incident {
 export interface CreateMonitorInput {
 	name: string;
 	script: string;
+	group_id: string;
 	interval_seconds?: number;
 	timeout_ms?: number;
 	active?: boolean;
+	is_public?: boolean;
 }
 
 export interface UpdateMonitorInput extends Partial<CreateMonitorInput> {

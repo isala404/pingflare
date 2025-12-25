@@ -1,9 +1,10 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { getMonitorById, getLastCheck, getUptime24h } from '$lib/server/db/monitors';
+import { getAllGroups } from '$lib/server/db/groups';
 import type { MonitorWithStatus } from '$lib/types/monitor';
 
-export const load: PageServerLoad = async ({ params, platform }) => {
+export const load: PageServerLoad = async ({ params, platform, locals }) => {
 	const db = platform?.env?.DB;
 	if (!db) {
 		throw error(500, 'Database not available');
@@ -14,8 +15,11 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 		throw error(404, 'Monitor not found');
 	}
 
-	const lastCheck = await getLastCheck(db, monitor.id);
-	const uptime24h = await getUptime24h(db, monitor.id);
+	const [lastCheck, uptime24h, groups] = await Promise.all([
+		getLastCheck(db, monitor.id),
+		getUptime24h(db, monitor.id),
+		getAllGroups(db)
+	]);
 
 	const monitorWithStatus: MonitorWithStatus = {
 		...monitor,
@@ -24,5 +28,5 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 		uptime_24h: uptime24h
 	};
 
-	return { monitor: monitorWithStatus };
+	return { monitor: monitorWithStatus, groups, user: locals.user };
 };

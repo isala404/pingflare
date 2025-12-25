@@ -5,11 +5,13 @@ import { getSession, getUserById, isAppSetup, userToPublic } from '$lib/server/d
 const PUBLIC_PATHS = [
 	'/login',
 	'/setup',
+	'/status',
 	'/api/auth/login',
 	'/api/auth/setup',
 	'/api/auth/status',
 	'/api/cron',
-	'/api/status'
+	'/api/status',
+	'/api/public'
 ];
 
 export const handle: Handle = async ({ event, resolve }) => {

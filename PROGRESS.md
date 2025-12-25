@@ -185,3 +185,73 @@ Enhanced time display and browser push UX.
 - PushNotificationToggle now accepts onSubscriptionChange callback to notify parent when push enabled/disabled
 - src/routes/notifications/+page.svelte: Passes loadChannels to PushNotificationToggle so channel list updates immediately
 - Deployed to https://pingflare.pages.dev
+
+Added public status page with uptime metrics, charts, and announcements.
+
+- migrations/0002_status_page.sql: Added is_public column to monitors, status_announcements table, check_aggregates table for hourly data
+- src/lib/types/status.ts: Types for announcements, uptime metrics (24h, 30d, 6m, 1y), chart data points
+- src/lib/types/monitor.ts: Added is_public field to Monitor interface
+- src/lib/server/db/status.ts: Functions for public/all monitors, uptime calculations, chart data, hourly aggregation
+- src/lib/server/db/announcements.ts: CRUD for status announcements (maintenance, incident, resolved, info)
+- src/routes/api/cron/+server.ts: Added hourly aggregation and cleanup for check data
+- Public API endpoints: /api/public/status, /api/public/status/[id], /api/public/announcements
+- Admin API endpoints: /api/announcements, /api/announcements/[id] for CRUD
+- src/hooks.server.ts: Added /status and /api/public to PUBLIC_PATHS
+- UI components: UptimeChart.svelte (lightweight-charts), UptimeStats.svelte, AnnouncementBanner.svelte, AnnouncementCard.svelte, AnnouncementForm.svelte, StatusCard.svelte, PublicLayout.svelte
+- src/lib/components/MonitorForm.svelte: Added "Show on Public Status Page" toggle
+- Public pages: /status (list all public monitors), /status/[id] (30-day chart, uptime stats)
+- Admin pages: /admin/status (all monitors), /admin/status/[id] (detailed view), /announcements (CRUD)
+- Navigation: Added Status link to Header.svelte and BottomNav.svelte
+- Deployed to https://pingflare.pages.dev
+
+Redesigned status page with incident management system.
+
+- Removed complex charts in favor of simple 90-day CSS uptime bars (like Anthropic's status page)
+- migrations/0003_incidents.sql: incidents, incident_updates, daily_status tables
+- src/lib/types/status.ts: Rewritten with DailyStatus, StatusMonitor, Incident, IncidentUpdate, IncidentsByDate types
+- src/lib/components/UptimeBars.svelte: CSS bars for 90 days with hover tooltips (green=up, yellow=degraded, red=down)
+- src/lib/server/db/status.ts: Rewritten with getDailyStatus, getUptime90d, incident CRUD, aggregateDailyStatus
+- API endpoints: /api/incidents (GET/POST), /api/incidents/[id] (GET/POST/DELETE), /api/public/incidents
+- src/routes/status/+page.svelte: Public page with overall status banner, active incidents, uptime bars, past incidents by date
+- src/routes/admin/status/+page.svelte: Admin page with UptimeBars, active incidents summary, link to incident management
+- src/routes/admin/incidents/+page.svelte: Full incident management with create, add updates, delete
+- Removed: UptimeChart, UptimeStats, AnnouncementBanner, AnnouncementForm, AnnouncementCard, StatusCard components
+- Removed: /announcements page, /api/announcements endpoints, status detail pages (/status/[id], /admin/status/[id])
+- Removed: lightweight-charts dependency
+- src/routes/api/cron/+server.ts: Changed to daily aggregation with aggregateDailyStatus, cleanupOldDailyStatus
+- Deployed to https://pingflare.pages.dev
+
+Added monitor groups with per-group status and 5-min failure threshold.
+
+- migrations/0004_monitor_groups.sql: monitor_groups table, group_id columns on monitors and incidents
+- src/lib/types/group.ts: MonitorGroup, GroupWithStatus, CreateGroupInput, UpdateGroupInput types
+- src/lib/types/monitor.ts: Added group_id to Monitor, CreateMonitorInput
+- src/lib/types/status.ts: Added group_id, group_name to Incident; group_id to StatusMonitor; group_id to CreateIncidentInput
+- src/lib/server/db/groups.ts: CRUD for groups, getPublicGroupsWithStatus, getAllGroupsWithStatus, getOrCreateDefaultGroup
+- src/lib/server/db/status.ts: Added getEffectiveStatus for 5-min threshold, updated incident queries with group_name join
+- src/lib/server/db/monitors.ts: Updated createMonitor/updateMonitor with group_id
+- API endpoints: /api/groups (GET/POST), /api/groups/[id] (GET/PUT/DELETE)
+- src/routes/api/incidents/+server.ts: Requires group_id for incident creation
+- src/routes/admin/groups/+page.svelte: Group management page with CRUD
+- src/lib/components/MonitorForm.svelte: Added group selector dropdown (required field)
+- src/routes/monitors/new/, src/routes/monitors/[id]/edit/: Load and pass groups to MonitorForm
+- src/routes/status/+page.svelte: Monitors grouped by group with per-group status badges and uptime
+- src/routes/admin/status/+page.svelte: Grouped display with link to Manage Groups
+- src/routes/admin/incidents/+page.svelte: Group selector in incident form, group_name badges on cards
+- 5-min failure threshold: getEffectiveStatus returns 'down' only if last 5 mins of checks all fail (dashboard display only)
+
+Moved visibility control to groups and redesigned public status pages.
+
+- migrations/0005_group_visibility.sql: Added slug and is_public columns to monitor_groups
+- src/lib/types/group.ts: Added slug, is_public to MonitorGroup; updated Create/UpdateGroupInput with slug, is_public
+- src/lib/server/db/groups.ts: Added getPublicGroups, getGroupBySlug, getGroupWithStatusBySlug functions
+- src/lib/server/db/groups.ts: Updated createGroup/updateGroup to handle slug and is_public
+- src/lib/server/db/groups.ts: Changed getPublicGroupsWithStatus to filter by group.is_public (not monitor.is_public)
+- src/routes/status/+page.svelte: Redesigned to show group cards in grid with status badges, links to /status/[slug]
+- src/routes/status/+page.server.ts: Simplified to load public groups with status and active incidents
+- src/routes/status/[slug]/+page.svelte: New group detail page with uptime bars, active and past incidents
+- src/routes/status/[slug]/+page.server.ts: Loads group by slug with full status data
+- src/routes/admin/groups/+page.svelte: Added slug input with auto-generation and is_public checkbox
+- src/routes/api/groups/+server.ts: POST now handles slug and is_public
+- src/lib/components/MonitorForm.svelte: Removed is_public checkbox (visibility controlled at group level)
+- Deployed to https://pingflare.pages.dev
