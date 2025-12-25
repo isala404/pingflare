@@ -137,36 +137,6 @@ export async function getUptime90d(db: D1Database, monitorId: string): Promise<n
 }
 
 /**
- * Get all public monitors with their status data for the status page
- */
-export async function getPublicMonitorsForStatusPage(db: D1Database): Promise<StatusMonitor[]> {
-	const monitors = await db
-		.prepare('SELECT * FROM monitors WHERE is_public = 1 ORDER BY name ASC')
-		.all<Monitor>();
-
-	const statusMonitors: StatusMonitor[] = await Promise.all(
-		monitors.results.map(async (monitor) => {
-			const [lastCheck, dailyStatus, uptime90d] = await Promise.all([
-				getLastCheck(db, monitor.id),
-				getDailyStatus(db, monitor.id),
-				getUptime90d(db, monitor.id)
-			]);
-
-			return {
-				id: monitor.id,
-				name: monitor.name,
-				group_id: monitor.group_id,
-				current_status: lastCheck?.status ?? null,
-				uptime_90d: uptime90d,
-				daily_status: dailyStatus
-			};
-		})
-	);
-
-	return statusMonitors;
-}
-
-/**
  * Get all monitors with status data (for admin)
  */
 export async function getAllMonitorsForStatusPage(db: D1Database): Promise<StatusMonitor[]> {

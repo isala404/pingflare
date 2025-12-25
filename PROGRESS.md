@@ -269,3 +269,40 @@ Fixed notification linking on monitor create/edit and increased severity dropdow
 - src/routes/monitors/new/+page.svelte: Extract notifications from FormData and include in API request
 - src/routes/monitors/[id]/edit/+page.svelte: Extract notifications from FormData and include in API request
 - src/lib/components/ScriptBuilder.svelte: Increased severity dropdown width from sm:w-24 to sm:w-32
+
+Enabled Cloudflare Deploy Button by converting from Pages to Workers deployment.
+
+- Created src/worker.ts: Custom worker entry point with fetch + scheduled handlers
+- Created scripts/build-worker.js: Post-build script to bundle SvelteKit output with esbuild
+- Updated wrangler.toml: Converted from Pages to Workers with Static Assets, added cron triggers
+- Updated package.json: Added esbuild dep, build:worker and deploy scripts
+- Updated src/app.d.ts: Added ASSETS binding type
+- Created .dev.vars.example: Empty secrets template for deploy button
+- Rewrote README.md: Added deploy button, feature list, architecture docs
+- Deleted workers/scheduler/: Merged cron handler into main worker
+- Build output: dist/_worker.js + static assets
+- Deploy button provisions D1 and configures cron automatically
+
+Fixed adapter-cloudflare conflict with dual wrangler config approach.
+
+- Created wrangler.build.toml: Pages-style config for SvelteKit build phase
+- Updated wrangler.toml: Workers-style config for deployment only
+- Updated package.json build script: Swaps configs during build
+
+Removed KV namespace dependency from codebase.
+
+- Deleted src/lib/server/cache.ts: KV caching layer (not used)
+- Removed KV bindings from wrangler.toml and wrangler.build.toml
+- Removed STATUS_CACHE type from src/app.d.ts and src/worker.ts
+- Status endpoints now query D1 directly (fast enough for small-scale monitoring)
+
+Consolidated migrations and removed backward compatibility code.
+
+- Compacted 5 migration files into single migrations/0001_schema.sql with final schema
+- Removed is_public column from monitors (visibility now at group level only)
+- Removed is_public from Monitor type, CreateMonitorInput, and DB functions
+- Removed getPublicMonitorsForStatusPage (used monitor.is_public)
+- Updated /api/public/status to use group-based visibility via getPublicGroupsWithStatus
+- Cleaned up monitor new/edit pages to not pass is_public
+- Deleted migrations 0002-0005 (status_announcements, check_aggregates tables not used)
+- Updated MEMORIES.md with correct schema and removed KV references

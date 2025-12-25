@@ -1,22 +1,15 @@
+# Temporary config used during SvelteKit build phase
+# This tells adapter-cloudflare where to output files
 name = "pingflare"
-main = "dist/_worker.js"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Workers Static Assets
-[assets]
-directory = "dist"
+pages_build_output_dir = ".svelte-kit/cloudflare"
 
-# D1 Database binding
 [[d1_databases]]
 binding = "DB"
 database_name = "pingflare-db"
 database_id = "f53140e2-d3ea-4d34-b6f6-92db167c64d9"
 
-# Cron triggers - runs health checks every minute
-[triggers]
-crons = ["*/1 * * * *"]
-
-# Environment variables
 [vars]
 ENVIRONMENT = "production"

@@ -14,7 +14,7 @@ declare global {
 		interface Platform {
 			env: {
 				DB: D1Database;
-				STATUS_CACHE: KVNamespace;
+				ASSETS: Fetcher;
 			};
 			context: {
 				waitUntil(promise: Promise<unknown>): void;

@@ -10,11 +10,11 @@ Tooling
 
 Build & Deploy
 
-- Build: bun run build
-- Deploy main app: wrangler pages deploy .svelte-kit/cloudflare --commit-dirty=true
-- Deploy scheduler: cd workers/scheduler && wrangler deploy
-- Apply migrations: wrangler d1 migrations apply pingflare-db --remote
-- Full deploy: bun run build && wrangler pages deploy .svelte-kit/cloudflare --commit-dirty=true
+- Build: bun run build (SvelteKit + custom worker bundling via esbuild)
+- Deploy: bun run deploy (applies D1 migrations + wrangler deploy)
+- Output directory: dist/ (static assets + _worker.js)
+- Cron: Integrated scheduled() handler, runs every minute
+- Deploy button: One-click deployment from GitHub supported
 
 Project Context
 
@@ -22,13 +22,13 @@ Project Context
 - Goal: Monitor ~30 services on Hetzner dedicated server from external Cloudflare infrastructure
 - Inspiration: Uptime Kuma but serverless on Cloudflare ecosystem
 - Deployed at: https://pingflare.pages.dev
-- Current state: MVP complete with HTTP/Script monitoring, dashboard, KV caching, authentication
+- Current state: MVP complete with HTTP/Script monitoring, dashboard, authentication
 
 Cloudflare Resources
 
-- D1 Database: pingflare-db (0d72f344-30dd-4b55-8b20-86448147439f)
-- KV Namespace: STATUS_CACHE (bcb87ba93beb493bad285feff7362a2e)
-- Pages Project: pingflare
+- D1 Database: pingflare-db (binding: DB)
+- Workers Project: pingflare (with Static Assets)
+- ASSETS binding: Fetcher for static file serving
 
 Directory Structure
 
@@ -39,22 +39,22 @@ Directory Structure
 - src/lib/server/checkers/ - Health check implementations (script.ts executor, index.ts orchestrator)
 - src/lib/server/db/ - Database operations (monitors.ts, auth.ts, notifications.ts)
 - src/lib/server/notifications/ - Notification senders (slack.ts, discord.ts, webhook.ts, webpush.ts, index.ts)
-- src/lib/server/cache.ts - KV caching layer
 - src/lib/types/ - TypeScript interfaces (monitor.ts, auth.ts, script.ts, notification.ts)
 - src/routes/ - SvelteKit pages (dashboard, /login, /setup, /settings, /monitors/new, /monitors/[id]/edit, /notifications)
 - src/routes/api/ - REST API endpoints
 - src/hooks.server.ts - Auth middleware, route protection
-- workers/scheduler/ - Separate Worker for cron triggers
-- migrations/ - D1 SQL migrations (single 0001_schema.sql)
+- src/worker.ts - Custom worker entry (not used directly, template for build)
+- scripts/build-worker.js - Post-build worker bundling script
+- migrations/ - D1 SQL migration (single consolidated file: 0001_schema.sql)
 
 Database Schema
 
-- monitor_groups: id, name, description, display_order, created_at
-- monitors: id, name, group_id (FK), interval_seconds, timeout_ms, active, is_public, script (JSON DSL), created_at, updated_at
+- monitor_groups: id, name, slug, description, is_public, display_order, created_at
+- monitors: id, name, group_id (FK), interval_seconds, timeout_ms, active, script (JSON DSL), created_at, updated_at
 - checks: id, monitor_id (FK), status, response_time_ms, status_code, error_message, checked_at, checked_from
 - incidents: id, title, status, group_id (FK), created_at, resolved_at
 - incident_updates: id, incident_id (FK), status, message, created_at
-- daily_status: monitor_id, date, status, downtime_minutes
+- daily_status: monitor_id, date, total_checks, up_checks, down_checks, degraded_checks, downtime_minutes
 - notification_channels: id, type (webhook/slack/discord/webpush), name, config (JSON), active, created_at
 - monitor_notifications: monitor_id, channel_id, notify_on (CSV), downtime_threshold_s (junction table)
 - push_subscriptions: id, endpoint (unique), p256dh, auth, user_agent, created_at
@@ -67,7 +67,7 @@ API Endpoints
 - GET/POST /api/monitors - List/create monitors
 - GET/PUT/DELETE /api/monitors/[id] - Single monitor CRUD
 - GET /api/cron - Trigger health checks (manual or cron)
-- GET /api/status - Fast status from KV cache (public)
+- GET /api/status - Status endpoint (public, queries D1 directly)
 - GET/POST /api/groups - List/create monitor groups
 - GET/PUT/DELETE /api/groups/[id] - Single group CRUD
 - GET/POST /api/incidents - List/create incidents (requires group_id)
@@ -116,18 +116,12 @@ Script Checker (JSON DSL)
 - Validation function: validateScript() in src/lib/server/checkers/script.ts
 - Shared types: src/lib/types/script.ts (ScriptDSL, ScriptStep, Assertion, AssertionSeverity, HttpMethod)
 
-Caching Strategy
+Scheduler (Integrated)
 
-- KV key "status:{monitorId}" - individual monitor status (5-minute TTL)
-- KV key "all_status" - aggregated status for dashboard (1-minute TTL)
-- /api/status tries KV first, falls back to DB query
-
-Scheduler Worker
-
-- Separate Cloudflare Worker at workers/scheduler/
-- Triggers /api/cron every minute via cron trigger
-- Deploy: cd workers/scheduler && wrangler deploy
-- Has /trigger endpoint for manual testing
+- Cron handler integrated in main Worker (scheduled() export)
+- Triggers /api/cron internally every minute via cron trigger
+- Configured in wrangler.toml [triggers] section
+- No separate deployment needed
 
 Svelte 5 Patterns
 
@@ -143,7 +137,6 @@ Coding Patterns
 - Checker orchestrator: src/lib/server/checkers/index.ts routes by monitor type
 - Dependency injection: db passed to all functions (testable)
 - Promise.allSettled() for parallel checks (tolerates individual failures)
-- Cache-aside pattern: KV cache with DB fallback
 - DTO pattern: userToPublic() removes password_hash
 - Dynamic SQL in updateMonitor() for partial updates
 
@@ -157,7 +150,7 @@ Architectural Constraints
 - Cron triggers max 25 monitors due to 50 subrequest limit per invocation
 - Cloudflare Workers blocks eval/new Function (script checker uses JSON DSL, not JS eval)
 - Workers can make outbound TCP connections via connect() API from cloudflare:sockets
-- Free tier: 100k requests/day, 10ms CPU/request, 1GB KV storage
+- Free tier: 100k requests/day, 10ms CPU/request
 
 UI Component Library
 

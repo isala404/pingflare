@@ -1,0 +1,10 @@
+# Pingflare Environment Variables
+#
+# No secrets are required for basic setup.
+# Copy this file to .dev.vars for local development.
+#
+# VAPID keys for web push notifications are auto-generated
+# on first setup and stored in the D1 database.
+#
+# Notification channel secrets (Slack webhooks, Discord webhooks, etc.)
+# are configured through the UI and stored in the database.

@@ -31,7 +31,6 @@
 					? parseInt(formData.get('timeout_ms') as string, 10)
 					: undefined,
 				active: formData.get('active') === '1',
-				is_public: formData.get('is_public') === '1',
 				notifications
 			};
 

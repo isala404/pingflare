@@ -27,8 +27,8 @@ export async function createMonitor(db: D1Database, input: CreateMonitorInput): 
 
 	await db
 		.prepare(
-			`INSERT INTO monitors (id, name, script, group_id, interval_seconds, timeout_ms, active, is_public, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			`INSERT INTO monitors (id, name, script, group_id, interval_seconds, timeout_ms, active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.bind(
 			id,
@@ -38,7 +38,6 @@ export async function createMonitor(db: D1Database, input: CreateMonitorInput): 
 			input.interval_seconds ?? 60,
 			input.timeout_ms ?? 30000,
 			input.active !== false ? 1 : 0,
-			input.is_public ? 1 : 0,
 			now,
 			now
 		)
@@ -84,10 +83,6 @@ export async function updateMonitor(
 	if (input.active !== undefined) {
 		updates.push('active = ?');
 		values.push(input.active ? 1 : 0);
-	}
-	if (input.is_public !== undefined) {
-		updates.push('is_public = ?');
-		values.push(input.is_public ? 1 : 0);
 	}
 	if (input.group_id !== undefined) {
 		updates.push('group_id = ?');
