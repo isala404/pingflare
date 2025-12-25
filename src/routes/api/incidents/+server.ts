@@ -3,7 +3,11 @@ import type { RequestHandler } from './$types';
 import { getAllIncidents, createIncident } from '$lib/server/db/status';
 import type { CreateIncidentInput } from '$lib/types/status';
 
-export const GET: RequestHandler = async ({ platform }) => {
+export const GET: RequestHandler = async ({ platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}
@@ -12,7 +16,11 @@ export const GET: RequestHandler = async ({ platform }) => {
 	return json(incidents);
 };
 
-export const POST: RequestHandler = async ({ request, platform }) => {
+export const POST: RequestHandler = async ({ request, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}

@@ -6,7 +6,11 @@ import type { StatusResponse } from '$lib/types/monitor';
 // KV caching disabled to stay within free tier limits
 // D1 queries are fast enough for small-scale monitoring
 
-export const GET: RequestHandler = async ({ platform }) => {
+export const GET: RequestHandler = async ({ platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	const db = platform?.env?.DB;
 
 	if (!db) {

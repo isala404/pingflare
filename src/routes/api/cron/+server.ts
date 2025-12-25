@@ -14,7 +14,15 @@ import type { MonitorStatus } from '$lib/types/monitor';
 // KV caching disabled to stay within free tier limits (1000 puts/day)
 // D1 queries are fast enough for small-scale monitoring
 
-export const GET: RequestHandler = async ({ platform }) => {
+export const GET: RequestHandler = async ({ platform, request }) => {
+	// Validate cron secret - must match CRON_SECRET environment variable
+	const cronSecret = platform?.env?.CRON_SECRET;
+	const providedSecret = request.headers.get('X-Cron-Secret');
+
+	if (!cronSecret || providedSecret !== cronSecret) {
+		return json({ error: 'Forbidden' }, { status: 403 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}

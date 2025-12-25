@@ -6,7 +6,11 @@ import type { CreateMonitorInput, MonitorWithStatus } from '$lib/types/monitor';
 import type { MonitorNotificationInput } from '$lib/types/notification';
 import { validateScript } from '$lib/server/checkers/script';
 
-export const GET: RequestHandler = async ({ platform }) => {
+export const GET: RequestHandler = async ({ platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}
@@ -31,7 +35,11 @@ export const GET: RequestHandler = async ({ platform }) => {
 	return json(monitorsWithStatus);
 };
 
-export const POST: RequestHandler = async ({ request, platform }) => {
+export const POST: RequestHandler = async ({ request, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}

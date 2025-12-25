@@ -7,7 +7,11 @@ import {
 } from '$lib/server/db/notifications';
 import { sendTestNotification } from '$lib/server/notifications';
 
-export const POST: RequestHandler = async ({ params, platform, url }) => {
+export const POST: RequestHandler = async ({ params, platform, url, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}

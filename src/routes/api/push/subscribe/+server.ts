@@ -27,7 +27,11 @@ function getBrowserName(userAgent: string | null): string {
 	return 'Browser';
 }
 
-export const POST: RequestHandler = async ({ request, platform }) => {
+export const POST: RequestHandler = async ({ request, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}
@@ -80,7 +84,11 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	}
 };
 
-export const DELETE: RequestHandler = async ({ request, platform }) => {
+export const DELETE: RequestHandler = async ({ request, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}

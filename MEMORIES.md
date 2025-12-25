@@ -92,8 +92,13 @@ Authentication
 - User fields: name, email (login), password
 - Role-based permissions: admin/editor/viewer (defined in src/lib/types/auth.ts)
 - First visit redirects to /setup, subsequent visits to /login
-- Protected routes: all except /login, /setup, /api/auth/\*, /api/cron, /api/status
 - Settings page at /settings for profile and password management
+- API auth pattern: each handler checks `if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 })`
+- Public API: /api/public/*, /api/auth/*
+- Protected API: all other endpoints require authenticated session
+- /api/cron: requires CRON_SECRET env var, validates X-Cron-Secret header (internal scheduled handler only)
+- /api/status: requires auth (returns all monitors, use /api/public/status for public data)
+- CRON_SECRET: required secret for cron, set via `wrangler secret put CRON_SECRET`
 
 Monitor Types
 

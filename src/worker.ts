@@ -14,6 +14,7 @@ interface Env {
 	DB: D1Database;
 	ASSETS: Fetcher;
 	ENVIRONMENT?: string;
+	CRON_SECRET?: string;
 }
 
 export default {
@@ -35,13 +36,18 @@ export default {
 	): Promise<void> {
 		console.log(`[Scheduler] Triggering health checks at ${new Date().toISOString()}`);
 
+		if (!env.CRON_SECRET) {
+			console.error('[Scheduler] CRON_SECRET not configured');
+			return;
+		}
+
 		// Create a synthetic request to the cron endpoint
 		// The URL doesn't matter for internal routing - SvelteKit will match the path
 		const request = new Request('https://pingflare.internal/api/cron', {
 			method: 'GET',
 			headers: {
 				'User-Agent': 'Pingflare-Scheduler/1.0',
-				'X-Trigger-Source': 'cron'
+				'X-Cron-Secret': env.CRON_SECRET
 			}
 		});
 

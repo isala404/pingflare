@@ -15,6 +15,7 @@ declare global {
 			env: {
 				DB: D1Database;
 				ASSETS: Fetcher;
+				CRON_SECRET?: string;
 			};
 			context: {
 				waitUntil(promise: Promise<unknown>): void;

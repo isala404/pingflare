@@ -64,11 +64,16 @@ export default {
 	async scheduled(controller, env, ctx) {
 		console.log('[Scheduler] Triggering health checks at ' + new Date().toISOString());
 
+		if (!env.CRON_SECRET) {
+			console.error('[Scheduler] CRON_SECRET not configured');
+			return;
+		}
+
 		const request = new Request('https://pingflare.internal/api/cron', {
 			method: 'GET',
 			headers: {
 				'User-Agent': 'Pingflare-Scheduler/1.0',
-				'X-Trigger-Source': 'cron'
+				'X-Cron-Secret': env.CRON_SECRET
 			}
 		});
 

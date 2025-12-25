@@ -51,6 +51,8 @@ Get alerted when things break:
 
 - **Session-based auth** — Secure login with email/password
 - **Role-based access** — Admin, Editor, and Viewer roles
+- **Protected APIs** — All admin endpoints require authentication
+- **Secure cron** — Scheduled health checks use a secret token (not exposed in repo)
 - **Your infrastructure** — Data never leaves your Cloudflare account
 
 ## Quick Start
@@ -60,7 +62,8 @@ Get alerted when things break:
 1. Click the **Deploy to Cloudflare** button above
 2. Authorize Cloudflare to access your GitHub
 3. Click Deploy — Cloudflare handles the rest
-4. Visit your Worker URL and create an admin account
+4. Set the cron secret (required for scheduled health checks):
+5. Visit your Worker URL and create an admin account
 
 ### Manual Setup
 
@@ -72,6 +75,10 @@ wrangler login
 wrangler d1 create pingflare-db
 # Update wrangler.toml with your database ID
 bun run build && bun run deploy
+
+# Set the cron secret (required for scheduled health checks)
+wrangler secret put CRON_SECRET
+# Enter a random string (generate with: openssl rand -hex 32)
 ```
 
 ## Local Development

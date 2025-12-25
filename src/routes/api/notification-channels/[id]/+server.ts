@@ -7,7 +7,11 @@ import {
 } from '$lib/server/db/notifications';
 import type { UpdateNotificationChannelInput } from '$lib/types/notification';
 
-export const GET: RequestHandler = async ({ params, platform }) => {
+export const GET: RequestHandler = async ({ params, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}
@@ -20,7 +24,11 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 	return json(channel);
 };
 
-export const PUT: RequestHandler = async ({ params, request, platform }) => {
+export const PUT: RequestHandler = async ({ params, request, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}
@@ -44,7 +52,11 @@ export const PUT: RequestHandler = async ({ params, request, platform }) => {
 	}
 };
 
-export const DELETE: RequestHandler = async ({ params, platform }) => {
+export const DELETE: RequestHandler = async ({ params, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}

@@ -8,7 +8,11 @@ import {
 } from '$lib/server/db/groups';
 import type { UpdateGroupInput } from '$lib/types/group';
 
-export const GET: RequestHandler = async ({ params, platform }) => {
+export const GET: RequestHandler = async ({ params, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}
@@ -23,7 +27,11 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 	return json({ ...group, monitor_count: monitorCount });
 };
 
-export const PUT: RequestHandler = async ({ params, request, platform }) => {
+export const PUT: RequestHandler = async ({ params, request, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}
@@ -50,7 +58,11 @@ export const PUT: RequestHandler = async ({ params, request, platform }) => {
 	}
 };
 
-export const DELETE: RequestHandler = async ({ params, platform }) => {
+export const DELETE: RequestHandler = async ({ params, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}

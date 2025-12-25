@@ -13,7 +13,11 @@ import type { CreateMonitorInput, MonitorWithStatus } from '$lib/types/monitor';
 import type { MonitorNotificationInput } from '$lib/types/notification';
 import { validateScript } from '$lib/server/checkers/script';
 
-export const GET: RequestHandler = async ({ params, platform, url }) => {
+export const GET: RequestHandler = async ({ params, platform, url, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}
@@ -45,7 +49,11 @@ export const GET: RequestHandler = async ({ params, platform, url }) => {
 	return json(result);
 };
 
-export const PUT: RequestHandler = async ({ params, request, platform }) => {
+export const PUT: RequestHandler = async ({ params, request, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}
@@ -85,7 +93,11 @@ export const PUT: RequestHandler = async ({ params, request, platform }) => {
 	}
 };
 
-export const DELETE: RequestHandler = async ({ params, platform }) => {
+export const DELETE: RequestHandler = async ({ params, platform, locals }) => {
+	if (!locals.user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	if (!platform?.env?.DB) {
 		return json({ error: 'Database not available' }, { status: 500 });
 	}

@@ -323,3 +323,26 @@ Optimized Deploy to Cloudflare button support with D1 migrations and cron schedu
 - Updated package.json deploy script: Runs D1 migrations before wrangler deploy
 - Added cloudflare.bindings description in package.json for deploy button UI
 - Rewrote README.md: Comprehensive documentation with deploy button, features, architecture, usage guide, DSL reference
+
+Fixed critical API authentication vulnerability - all admin endpoints now require authentication.
+
+- Added `locals.user` auth guard to all admin API endpoints (22 handlers total)
+- src/routes/api/monitors/+server.ts: GET, POST now require auth
+- src/routes/api/monitors/[id]/+server.ts: GET, PUT, DELETE now require auth
+- src/routes/api/monitors/[id]/notifications/+server.ts: GET now requires auth
+- src/routes/api/groups/+server.ts: GET, POST now require auth
+- src/routes/api/groups/[id]/+server.ts: GET, PUT, DELETE now require auth
+- src/routes/api/incidents/+server.ts: GET, POST now require auth
+- src/routes/api/incidents/[id]/+server.ts: GET, POST, DELETE now require auth
+- src/routes/api/notification-channels/+server.ts: GET, POST now require auth
+- src/routes/api/notification-channels/[id]/+server.ts: GET, PUT, DELETE now require auth
+- src/routes/api/notification-channels/[id]/test/+server.ts: POST now requires auth
+- src/routes/api/push/subscribe/+server.ts: POST, DELETE now require auth
+- src/routes/api/push/vapid-key/+server.ts: GET now requires auth
+- src/routes/api/cron/+server.ts: requires CRON_SECRET env var and X-Cron-Secret header
+- src/routes/api/status/+server.ts: now requires auth (was exposing all monitors publicly)
+- src/worker.ts, scripts/build-worker.js: scheduled handler passes CRON_SECRET to cron endpoint
+- src/app.d.ts: added CRON_SECRET to Platform.env type
+- wrangler.toml: documented CRON_SECRET requirement
+- README.md: added CRON_SECRET setup instructions to Quick Start
+- Public endpoints: /api/public/*, /api/auth/*
