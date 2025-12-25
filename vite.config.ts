@@ -45,6 +45,8 @@ export default defineConfig({
 			workbox: {
 				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,webmanifest}'],
 				navigateFallback: null,
+				// Import push notification handler into the generated service worker
+				importScripts: ['/sw-push.js'],
 				runtimeCaching: [
 					{
 						urlPattern: /^https:\/\/.*\/_app\/.*/,

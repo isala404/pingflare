@@ -1,27 +1,16 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getAllStatus } from '$lib/server/cache';
 import { getAllMonitors, getLastCheck, getUptime24h } from '$lib/server/db/monitors';
 import type { StatusCacheEntry } from '$lib/types/monitor';
 
+// KV caching disabled to stay within free tier limits
+// D1 queries are fast enough for small-scale monitoring
+
 export const GET: RequestHandler = async ({ platform }) => {
-	const kv = platform?.env?.STATUS_CACHE;
 	const db = platform?.env?.DB;
 
-	// Try to get from KV cache first (fast path)
-	if (kv) {
-		const cached = await getAllStatus(kv);
-		if (cached) {
-			return json({
-				source: 'cache',
-				statuses: cached
-			});
-		}
-	}
-
-	// Fallback to database (slow path)
 	if (!db) {
-		return json({ error: 'No data source available' }, { status: 500 });
+		return json({ error: 'Database not available' }, { status: 500 });
 	}
 
 	const monitors = await getAllMonitors(db);

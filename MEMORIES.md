@@ -34,7 +34,8 @@ Directory Structure
 
 - src/lib/components/ - Svelte components (MonitorCard, MonitorForm, Modal, StatusBadge, ReloadPrompt, ScriptBuilder, ScriptEditor)
 - src/lib/server/checkers/ - Health check implementations (script.ts executor, index.ts orchestrator)
-- src/lib/server/db/ - Database operations (monitors.ts, auth.ts)
+- src/lib/server/db/ - Database operations (monitors.ts, auth.ts, notifications.ts)
+- src/lib/server/notifications/ - Notification senders (slack.ts, discord.ts, webhook.ts, webpush.ts, index.ts)
 - src/lib/server/cache.ts - KV caching layer
 - src/lib/types/ - TypeScript interfaces (monitor.ts, auth.ts, script.ts)
 - src/routes/ - SvelteKit pages (dashboard, /login, /setup, /settings, /monitors/new, /monitors/[id]/edit)
@@ -47,9 +48,10 @@ Database Schema
 
 - monitors: id, name, type, url, hostname, port, method, expected_status, keyword, keyword_type, interval_seconds, timeout_ms, retry_count, active, script, created_at, updated_at
 - checks: id, monitor_id (FK), status, response_time_ms, status_code, error_message, checked_at, checked_from
-- incidents: id, monitor_id (FK), status (ongoing/resolved), started_at, resolved_at, duration_seconds
-- notification_channels: id, type, name, config (JSON), active, created_at
-- monitor_notifications: monitor_id, channel_id, notify_on (junction table)
+- incidents: id, monitor_id (FK), status (ongoing/resolved), started_at, resolved_at, duration_seconds, notified_channels (JSON)
+- notification_channels: id, type (webhook/slack/discord/webpush), name, config (JSON), active, created_at
+- monitor_notifications: monitor_id, channel_id, notify_on (CSV), downtime_threshold_s (junction table)
+- push_subscriptions: id, endpoint (unique), p256dh, auth, user_agent, created_at
 - users: id, name, email (unique), password_hash, role, created_at, updated_at, last_login_at
 - sessions: id, user_id (FK), expires_at, created_at
 - app_settings: key, value, updated_at
@@ -66,6 +68,12 @@ API Endpoints
 - POST /api/auth/logout - Delete session
 - PUT /api/auth/profile - Update user name
 - PUT /api/auth/password - Change password
+- GET/POST /api/notification-channels - List/create notification channels
+- GET/PUT/DELETE /api/notification-channels/[id] - Single channel CRUD
+- POST /api/notification-channels/[id]/test - Send test notification
+- GET /api/push/vapid-key - Get VAPID public key for browser subscription
+- POST/DELETE /api/push/subscribe - Manage push subscriptions
+- GET /api/monitors/[id]/notifications - Get monitor's notification subscriptions
 
 Authentication
 
@@ -141,10 +149,10 @@ Architectural Constraints
 
 Not Yet Implemented
 
-- Incident tracking (schema exists, not integrated)
-- Notification channels (Slack, webhook, email, Discord, Telegram - schema exists)
+- Email and Telegram notification channels
 - TCP/DNS checkers (scaffolded)
 - Retry logic (retry_count field unused)
+- Downtime threshold enforcement per channel (schema ready, cron not fully integrated)
 
 User Preferences
 

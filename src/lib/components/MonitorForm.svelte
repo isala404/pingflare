@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { MonitorWithStatus } from '$lib/types/monitor';
 	import type { ScriptDSL } from '$lib/types/script';
+	import type { NotificationChannel, MonitorNotificationInput } from '$lib/types/notification';
 	import { getDefaultScript, scriptToJson, jsonToScript } from '$lib/types/script';
 	import ScriptBuilder from './ScriptBuilder.svelte';
 	import ScriptEditor from './ScriptEditor.svelte';
+	import MonitorNotificationConfig from './MonitorNotificationConfig.svelte';
 
 	let {
 		monitor = null,
@@ -37,6 +40,36 @@
 
 	let isSubmitting = $state(false);
 	let error = $state('');
+
+	let notificationChannels = $state<NotificationChannel[]>([]);
+	let notifications = $state<MonitorNotificationInput[]>([]);
+
+	onMount(async () => {
+		try {
+			const channelsRes = await fetch('/api/notification-channels');
+			if (channelsRes.ok) {
+				notificationChannels = await channelsRes.json();
+			}
+
+			if (monitor?.id) {
+				const subsRes = await fetch(`/api/monitors/${monitor.id}/notifications`);
+				if (subsRes.ok) {
+					const subs = (await subsRes.json()) as Array<{
+						channel_id: string;
+						notify_on: string;
+						downtime_threshold_s: number;
+					}>;
+					notifications = subs.map((s) => ({
+						channelId: s.channel_id,
+						notifyOn: s.notify_on.split(',').filter(Boolean) as ('up' | 'down' | 'degraded')[],
+						downtimeThresholdSeconds: s.downtime_threshold_s
+					}));
+				}
+			}
+		} catch {
+			// Ignore errors loading channels
+		}
+	});
 
 	function switchToCode() {
 		code = scriptToJson(script);
@@ -157,6 +190,7 @@ Requirement:
 		formData.set('interval_seconds', intervalSeconds);
 		formData.set('timeout_ms', timeoutMs);
 		formData.set('active', active ? '1' : '0');
+		formData.set('notifications', JSON.stringify(notifications));
 
 		if (monitor?.id) {
 			formData.set('id', monitor.id);
@@ -273,6 +307,14 @@ Requirement:
 			class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
 		/>
 		<label for="active" class="text-sm font-medium text-gray-700">Active</label>
+	</div>
+
+	<div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+		<MonitorNotificationConfig
+			channels={notificationChannels}
+			value={notifications}
+			onchange={(n) => (notifications = n)}
+		/>
 	</div>
 
 	<div class="flex justify-end gap-3 pt-4">

@@ -4,6 +4,7 @@
 	import type { MonitorWithStatus } from '$lib/types/monitor';
 	import type { PageData } from './$types';
 	import MonitorCard from '$lib/components/MonitorCard.svelte';
+	import PushNotificationToggle from '$lib/components/PushNotificationToggle.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -92,6 +93,7 @@
 				<p class="text-sm text-gray-500">Uptime Monitoring Dashboard</p>
 			</div>
 			<div class="flex items-center gap-3">
+				<PushNotificationToggle />
 				<button
 					onclick={runChecksNow}
 					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -103,6 +105,12 @@
 					class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
 				>
 					Add Monitor
+				</a>
+				<a
+					href={resolve('/notifications')}
+					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+				>
+					Notifications
 				</a>
 				<div class="ml-2 flex items-center gap-2 border-l border-gray-200 pl-4">
 					<a href={resolve('/settings')} class="text-sm text-gray-600 hover:text-gray-900">

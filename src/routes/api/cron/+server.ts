@@ -1,9 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getActiveMonitors, insertCheck, getUptime24h } from '$lib/server/db/monitors';
+import { getActiveMonitors, insertCheck, getLastCheck } from '$lib/server/db/monitors';
 import { runCheck } from '$lib/server/checkers';
-import { updateMonitorStatus, updateAllStatus } from '$lib/server/cache';
-import type { StatusCacheEntry } from '$lib/types/monitor';
+import { sendNotifications } from '$lib/server/notifications';
+import type { MonitorStatus } from '$lib/types/monitor';
+
+// KV caching disabled to stay within free tier limits (1000 puts/day)
+// D1 queries are fast enough for small-scale monitoring
 
 export const GET: RequestHandler = async ({ platform }) => {
 	if (!platform?.env?.DB) {
@@ -11,17 +14,17 @@ export const GET: RequestHandler = async ({ platform }) => {
 	}
 
 	const db = platform.env.DB;
-	const kv = platform.env.STATUS_CACHE;
 	const monitors = await getActiveMonitors(db);
 
 	if (monitors.length === 0) {
 		return json({ message: 'No active monitors', checked: 0 });
 	}
 
-	const statusEntries: StatusCacheEntry[] = [];
-
 	const results = await Promise.allSettled(
 		monitors.map(async (monitor) => {
+			const lastCheck = await getLastCheck(db, monitor.id);
+			const previousStatus: MonitorStatus | null = lastCheck?.status ?? null;
+
 			const result = await runCheck(monitor);
 			await insertCheck(
 				db,
@@ -33,20 +36,21 @@ export const GET: RequestHandler = async ({ platform }) => {
 				null // checked_from - could add colo info later
 			);
 
-			// Update KV cache for this monitor
-			const uptime24h = await getUptime24h(db, monitor.id);
-
-			if (kv) {
-				await updateMonitorStatus(kv, monitor.id, result.status, result.responseTimeMs, uptime24h);
+			// Send notifications on status change
+			if (previousStatus !== result.status) {
+				try {
+					await sendNotifications(
+						db,
+						monitor,
+						previousStatus,
+						result.status,
+						null, // incident tracking to be implemented
+						'mailto:admin@pingflare.app'
+					);
+				} catch (err) {
+					console.error(`Failed to send notifications for ${monitor.name}:`, err);
+				}
 			}
-
-			statusEntries.push({
-				monitor_id: monitor.id,
-				status: result.status,
-				response_time_ms: result.responseTimeMs,
-				checked_at: new Date().toISOString(),
-				uptime_24h: uptime24h
-			});
 
 			return {
 				monitorId: monitor.id,
@@ -55,11 +59,6 @@ export const GET: RequestHandler = async ({ platform }) => {
 			};
 		})
 	);
-
-	// Update aggregated status cache
-	if (kv && statusEntries.length > 0) {
-		await updateAllStatus(kv, statusEntries);
-	}
 
 	const successful = results.filter((r) => r.status === 'fulfilled').length;
 	const failed = results.filter((r) => r.status === 'rejected').length;

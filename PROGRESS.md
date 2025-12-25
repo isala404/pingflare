@@ -118,3 +118,19 @@ Replaced modal with dedicated pages for add/edit monitors.
 - Updated MonitorCard to use link for edit instead of callback
 - Dashboard now navigates to pages instead of opening modal
 - Full page layout provides more space for complex script builder UI
+
+Implemented multi-channel notification system with Slack, Discord, Webhook, and Web Push support.
+
+- Migration 0005_notifications.sql: Added push_subscriptions table, updated notification_channels with webpush type, added downtime_threshold_s to monitor_notifications, added notified_channels to incidents
+- src/lib/types/notification.ts: Types for channels, configs, payloads, VAPID keys
+- src/lib/server/db/notifications.ts: CRUD for channels, subscriptions, VAPID key storage
+- src/lib/server/notifications/: Senders for Slack (block kit), Discord (embeds), Webhook (template vars), WebPush (VAPID/aes128gcm encryption)
+- src/routes/api/notification-channels/: REST API for channel management with test endpoint
+- src/routes/api/push/: VAPID key and push subscription endpoints
+- static/sw-push.js: Service worker for push notification handling
+- src/lib/components/PushNotificationToggle.svelte: Browser push enable/disable UI on dashboard
+- src/routes/notifications/+page.svelte: Channel management page with NotificationChannelForm and NotificationChannelCard components
+- src/lib/components/MonitorNotificationConfig.svelte: Per-monitor channel subscription with notify_on and threshold settings
+- Updated MonitorForm.svelte: Integrated notification config section
+- Updated src/routes/api/cron/+server.ts: Triggers notifications on status changes
+- TODO: Full downtime threshold enforcement with incident tracking integration

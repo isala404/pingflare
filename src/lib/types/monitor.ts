@@ -1,6 +1,5 @@
 export type MonitorStatus = 'up' | 'down' | 'degraded';
 export type IncidentStatus = 'ongoing' | 'resolved';
-export type NotificationChannelType = 'webhook' | 'email' | 'slack' | 'discord' | 'telegram';
 
 export interface Monitor {
 	id: string;
@@ -32,21 +31,7 @@ export interface Incident {
 	started_at: string;
 	resolved_at: string | null;
 	duration_seconds: number | null;
-}
-
-export interface NotificationChannel {
-	id: string;
-	type: NotificationChannelType;
-	name: string;
-	config: string;
-	active: number;
-	created_at: string;
-}
-
-export interface MonitorNotification {
-	monitor_id: string;
-	channel_id: string;
-	notify_on: string;
+	notified_channels: string;
 }
 
 export interface CreateMonitorInput {

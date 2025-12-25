@@ -8,7 +8,9 @@ import {
 	getUptime24h,
 	getRecentChecks
 } from '$lib/server/db/monitors';
+import { setMonitorNotifications } from '$lib/server/db/notifications';
 import type { CreateMonitorInput, MonitorWithStatus } from '$lib/types/monitor';
+import type { MonitorNotificationInput } from '$lib/types/notification';
 import { validateScript } from '$lib/server/checkers/script';
 
 export const GET: RequestHandler = async ({ params, platform, url }) => {
@@ -50,7 +52,7 @@ export const PUT: RequestHandler = async ({ params, request, platform }) => {
 
 	const db = platform.env.DB;
 
-	let input: Partial<CreateMonitorInput>;
+	let input: Partial<CreateMonitorInput> & { notifications?: MonitorNotificationInput[] };
 	try {
 		input = await request.json();
 	} catch {
@@ -65,10 +67,15 @@ export const PUT: RequestHandler = async ({ params, request, platform }) => {
 	}
 
 	try {
-		const monitor = await updateMonitor(db, params.id, input);
+		const { notifications, ...monitorInput } = input;
+		const monitor = await updateMonitor(db, params.id, monitorInput);
 
 		if (!monitor) {
 			return json({ error: 'Monitor not found' }, { status: 404 });
+		}
+
+		if (notifications !== undefined) {
+			await setMonitorNotifications(db, params.id, notifications);
 		}
 
 		return json(monitor);

@@ -1,7 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getAllMonitors, createMonitor, getLastCheck, getUptime24h } from '$lib/server/db/monitors';
+import { setMonitorNotifications } from '$lib/server/db/notifications';
 import type { CreateMonitorInput, MonitorWithStatus } from '$lib/types/monitor';
+import type { MonitorNotificationInput } from '$lib/types/notification';
 import { validateScript } from '$lib/server/checkers/script';
 
 export const GET: RequestHandler = async ({ platform }) => {
@@ -36,7 +38,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 	const db = platform.env.DB;
 
-	let input: CreateMonitorInput;
+	let input: CreateMonitorInput & { notifications?: MonitorNotificationInput[] };
 	try {
 		input = await request.json();
 	} catch {
@@ -57,7 +59,13 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	}
 
 	try {
-		const monitor = await createMonitor(db, input);
+		const { notifications, ...monitorInput } = input;
+		const monitor = await createMonitor(db, monitorInput);
+
+		if (notifications && notifications.length > 0) {
+			await setMonitorNotifications(db, monitor.id, notifications);
+		}
+
 		return json(monitor, { status: 201 });
 	} catch (err) {
 		console.error('Failed to create monitor:', err);
