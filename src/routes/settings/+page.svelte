@@ -133,24 +133,22 @@
 
 				{#if profileError}
 					<div class="mb-4">
-						<Alert variant="error" dismissible ondismiss={() => (profileError = '')}>{profileError}</Alert>
+						<Alert variant="error" dismissible ondismiss={() => (profileError = '')}
+							>{profileError}</Alert
+						>
 					</div>
 				{/if}
 
 				{#if profileSuccess}
 					<div class="mb-4">
-						<Alert variant="success" dismissible ondismiss={() => (profileSuccess = '')}>{profileSuccess}</Alert>
+						<Alert variant="success" dismissible ondismiss={() => (profileSuccess = '')}
+							>{profileSuccess}</Alert
+						>
 					</div>
 				{/if}
 
 				<form onsubmit={handleProfileSubmit} class="space-y-4">
-					<Input
-						type="text"
-						name="name"
-						label="Name"
-						bind:value={name}
-						required
-					/>
+					<Input type="text" name="name" label="Name" bind:value={name} required />
 
 					<Input
 						type="email"
@@ -175,13 +173,17 @@
 
 				{#if passwordError}
 					<div class="mb-4">
-						<Alert variant="error" dismissible ondismiss={() => (passwordError = '')}>{passwordError}</Alert>
+						<Alert variant="error" dismissible ondismiss={() => (passwordError = '')}
+							>{passwordError}</Alert
+						>
 					</div>
 				{/if}
 
 				{#if passwordSuccess}
 					<div class="mb-4">
-						<Alert variant="success" dismissible ondismiss={() => (passwordSuccess = '')}>{passwordSuccess}</Alert>
+						<Alert variant="success" dismissible ondismiss={() => (passwordSuccess = '')}
+							>{passwordSuccess}</Alert
+						>
 					</div>
 				{/if}
 
@@ -226,9 +228,7 @@
 				<p class="mb-4 text-sm text-gray-600">
 					Role: <span class="font-medium capitalize">{data.user?.role}</span>
 				</p>
-				<Button variant="danger" onclick={handleLogout}>
-					Sign Out
-				</Button>
+				<Button variant="danger" onclick={handleLogout}>Sign Out</Button>
 			</Card>
 		</div>
 	</Container>

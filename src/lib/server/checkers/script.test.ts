@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'bun:test';
-import { validateScript } from './script';
+import { describe, it, expect, mock } from 'bun:test';
+import { validateScript, executeScript } from './script';
 
 describe('validateScript', () => {
 	it('should return valid for a proper JSON DSL script', () => {
@@ -154,6 +154,238 @@ describe('validateScript', () => {
 			});
 			const result = validateScript(script);
 			expect(result.valid).toBe(true);
+		}
+	});
+
+	it('should return valid for script with assertion severity', () => {
+		const script = JSON.stringify({
+			steps: [
+				{
+					name: 'check_api',
+					request: {
+						method: 'GET',
+						url: 'https://api.example.com/status'
+					},
+					assert: [
+						{ check: 'status', equals: 200, severity: 'down' },
+						{ check: 'responseTime', lessThan: 500, severity: 'degraded' }
+					]
+				}
+			]
+		});
+		const result = validateScript(script);
+		expect(result.valid).toBe(true);
+	});
+
+	it('should return valid for script with responseTime assertion', () => {
+		const script = JSON.stringify({
+			steps: [
+				{
+					name: 'performance_check',
+					request: {
+						method: 'GET',
+						url: 'https://api.example.com/health'
+					},
+					assert: [{ check: 'responseTime', lessThan: 1000 }]
+				}
+			]
+		});
+		const result = validateScript(script);
+		expect(result.valid).toBe(true);
+	});
+});
+
+describe('executeScript', () => {
+	it('should return down status when assertion with severity=down fails', async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = mock(() =>
+			Promise.resolve(
+				new Response(JSON.stringify({ healthy: true }), {
+					status: 500,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		try {
+			const script = JSON.stringify({
+				steps: [
+					{
+						name: 'check_status',
+						request: {
+							method: 'GET',
+							url: 'https://api.example.com/health'
+						},
+						assert: [{ check: 'status', equals: 200, severity: 'down' }]
+					}
+				]
+			});
+			const result = await executeScript(script);
+			expect(result.status).toBe('down');
+			expect(result.errorMessage).toContain('assertion');
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	it('should return degraded status when assertion with default severity fails', async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = mock(() =>
+			Promise.resolve(
+				new Response(JSON.stringify({ healthy: false }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		try {
+			const script = JSON.stringify({
+				steps: [
+					{
+						name: 'check_health',
+						request: {
+							method: 'GET',
+							url: 'https://api.example.com/health'
+						},
+						assert: [{ check: 'json.healthy', equals: true }]
+					}
+				]
+			});
+			const result = await executeScript(script);
+			expect(result.status).toBe('degraded');
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	it('should return degraded status when assertion with severity=degraded fails', async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = mock(() =>
+			Promise.resolve(
+				new Response(JSON.stringify({ count: 5 }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		try {
+			const script = JSON.stringify({
+				steps: [
+					{
+						name: 'check_count',
+						request: {
+							method: 'GET',
+							url: 'https://api.example.com/data'
+						},
+						assert: [{ check: 'json.count', greaterThan: 10, severity: 'degraded' }]
+					}
+				]
+			});
+			const result = await executeScript(script);
+			expect(result.status).toBe('degraded');
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	it('should allow responseTime assertion', async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = mock(() =>
+			Promise.resolve(
+				new Response('OK', {
+					status: 200
+				})
+			)
+		);
+
+		try {
+			const script = JSON.stringify({
+				steps: [
+					{
+						name: 'check_performance',
+						request: {
+							method: 'GET',
+							url: 'https://api.example.com/health'
+						},
+						assert: [{ check: 'responseTime', lessThan: 10000 }]
+					}
+				]
+			});
+			const result = await executeScript(script);
+			expect(result.status).toBe('up');
+			expect(result.responseTimeMs).toBeGreaterThanOrEqual(0);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	it('should return down when both down and degraded severity assertions fail', async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = mock(() =>
+			Promise.resolve(
+				new Response(JSON.stringify({ healthy: false }), {
+					status: 500,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		try {
+			const script = JSON.stringify({
+				steps: [
+					{
+						name: 'multi_check',
+						request: {
+							method: 'GET',
+							url: 'https://api.example.com/health'
+						},
+						assert: [
+							{ check: 'status', equals: 200, severity: 'down' },
+							{ check: 'json.healthy', equals: true, severity: 'degraded' }
+						]
+					}
+				]
+			});
+			const result = await executeScript(script);
+			expect(result.status).toBe('down');
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	it('should return up when all assertions pass', async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = mock(() =>
+			Promise.resolve(
+				new Response(JSON.stringify({ healthy: true }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		try {
+			const script = JSON.stringify({
+				steps: [
+					{
+						name: 'full_check',
+						request: {
+							method: 'GET',
+							url: 'https://api.example.com/health'
+						},
+						assert: [
+							{ check: 'status', equals: 200, severity: 'down' },
+							{ check: 'json.healthy', equals: true }
+						]
+					}
+				]
+			});
+			const result = await executeScript(script);
+			expect(result.status).toBe('up');
+		} finally {
+			globalThis.fetch = originalFetch;
 		}
 	});
 });

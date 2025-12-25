@@ -255,3 +255,17 @@ Moved visibility control to groups and redesigned public status pages.
 - src/routes/api/groups/+server.ts: POST now handles slug and is_public
 - src/lib/components/MonitorForm.svelte: Removed is_public checkbox (visibility controlled at group level)
 - Deployed to https://pingflare.pages.dev
+
+Added assertion severity and responseTime check to DSL.
+
+- src/lib/types/script.ts: Added AssertionSeverity type ('degraded' | 'down'), added severity? field to Assertion interface
+- src/lib/server/checkers/script.ts: Updated executeScript to track assertion severity, responseTime now available as checkable path
+- src/lib/components/ScriptBuilder.svelte: Added severity dropdown per assertion, updated placeholder hints
+- src/lib/server/checkers/script.test.ts: Added 8 new tests for severity and responseTime assertions
+- MEMORIES.md: Updated DSL documentation with severity and responseTime features
+
+Fixed notification linking on monitor create/edit and increased severity dropdown width.
+
+- src/routes/monitors/new/+page.svelte: Extract notifications from FormData and include in API request
+- src/routes/monitors/[id]/edit/+page.svelte: Extract notifications from FormData and include in API request
+- src/lib/components/ScriptBuilder.svelte: Increased severity dropdown width from sm:w-24 to sm:w-32

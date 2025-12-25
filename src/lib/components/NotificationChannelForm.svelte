@@ -153,7 +153,12 @@
 					class="rounded-md p-1 text-gray-400 hover:text-gray-600"
 				>
 					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/>
 					</svg>
 				</button>
 			</div>
@@ -177,13 +182,24 @@
 				<!-- Webpush channels are auto-created, show info instead of type selector -->
 				<div class="rounded-lg bg-blue-50 p-3">
 					<div class="flex items-center gap-2">
-						<svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+						<svg
+							class="h-5 w-5 text-blue-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+							/>
 						</svg>
 						<span class="text-sm font-medium text-blue-800">Browser Push Notification</span>
 					</div>
 					<p class="mt-1 text-sm text-blue-700">
-						This channel was automatically created when push notifications were enabled in a browser.
+						This channel was automatically created when push notifications were enabled in a
+						browser.
 					</p>
 				</div>
 			{:else}
@@ -229,7 +245,9 @@
 						bind:value={webhookMethod}
 					/>
 					<div>
-						<label for="webhookHeaders" class="block text-sm font-medium text-gray-700">Headers (JSON)</label>
+						<label for="webhookHeaders" class="block text-sm font-medium text-gray-700"
+							>Headers (JSON)</label
+						>
 						<textarea
 							id="webhookHeaders"
 							bind:value={webhookHeaders}
@@ -251,10 +269,10 @@
 				<label for="channelActive" class="text-sm font-medium text-gray-700">Active</label>
 			</div>
 
-			<div class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
-				<Button type="button" variant="secondary" onclick={onClose}>
-					Cancel
-				</Button>
+			<div
+				class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end"
+			>
+				<Button type="button" variant="secondary" onclick={onClose}>Cancel</Button>
 				<Button type="submit" loading={saving}>
 					{saving ? 'Saving...' : 'Save'}
 				</Button>

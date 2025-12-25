@@ -22,8 +22,8 @@
 	let updateStatus = $state<IncidentStatus>('investigating');
 	let updateMessage = $state('');
 
-	const activeIncidents = $derived(data.incidents.filter(i => i.status !== 'resolved'));
-	const resolvedIncidents = $derived(data.incidents.filter(i => i.status === 'resolved'));
+	const activeIncidents = $derived(data.incidents.filter((i) => i.status !== 'resolved'));
+	const resolvedIncidents = $derived(data.incidents.filter((i) => i.status === 'resolved'));
 
 	function formatTime(dateStr: string): string {
 		const date = new Date(dateStr);
@@ -37,10 +37,14 @@
 
 	function getStatusColor(status: IncidentStatus): string {
 		switch (status) {
-			case 'investigating': return 'bg-red-100 text-red-700';
-			case 'identified': return 'bg-orange-100 text-orange-700';
-			case 'monitoring': return 'bg-blue-100 text-blue-700';
-			case 'resolved': return 'bg-green-100 text-green-700';
+			case 'investigating':
+				return 'bg-red-100 text-red-700';
+			case 'identified':
+				return 'bg-orange-100 text-orange-700';
+			case 'monitoring':
+				return 'bg-blue-100 text-blue-700';
+			case 'resolved':
+				return 'bg-green-100 text-green-700';
 		}
 	}
 
@@ -70,7 +74,7 @@
 			});
 
 			if (!response.ok) {
-				const errData = await response.json() as { error?: string };
+				const errData = (await response.json()) as { error?: string };
 				throw new Error(errData.error ?? 'Failed to create incident');
 			}
 
@@ -106,7 +110,7 @@
 			});
 
 			if (!response.ok) {
-				const data = await response.json() as { error?: string };
+				const data = (await response.json()) as { error?: string };
 				throw new Error(data.error ?? 'Failed to add update');
 			}
 
@@ -134,7 +138,7 @@
 			});
 
 			if (!response.ok) {
-				const data = await response.json() as { error?: string };
+				const data = (await response.json()) as { error?: string };
 				throw new Error(data.error ?? 'Failed to delete incident');
 			}
 
@@ -160,7 +164,11 @@
 	<Container>
 		<PageHeader title="Incidents" backHref="/admin/status">
 			{#snippet actions()}
-				<Button onclick={() => { showNewForm = true; }}>Report Incident</Button>
+				<Button
+					onclick={() => {
+						showNewForm = true;
+					}}>Report Incident</Button
+				>
 			{/snippet}
 		</PageHeader>
 
@@ -192,7 +200,8 @@
 						/>
 					</div>
 					<div>
-						<label for="group" class="block text-sm font-medium text-gray-700">Affected Group</label>
+						<label for="group" class="block text-sm font-medium text-gray-700">Affected Group</label
+						>
 						<select
 							id="group"
 							bind:value={newGroupId}
@@ -204,7 +213,11 @@
 							{/each}
 						</select>
 						{#if data.groups.length === 0}
-							<p class="mt-1 text-sm text-red-500">No groups available. <a href="/admin/groups" class="underline">Create a group first.</a></p>
+							<p class="mt-1 text-sm text-red-500">
+								No groups available. <a href="/admin/groups" class="underline"
+									>Create a group first.</a
+								>
+							</p>
 						{/if}
 					</div>
 					<div>
@@ -221,7 +234,9 @@
 						</select>
 					</div>
 					<div>
-						<label for="message" class="block text-sm font-medium text-gray-700">Initial Update</label>
+						<label for="message" class="block text-sm font-medium text-gray-700"
+							>Initial Update</label
+						>
 						<textarea
 							id="message"
 							bind:value={newMessage}
@@ -231,8 +246,15 @@
 						></textarea>
 					</div>
 					<div class="flex justify-end gap-2">
-						<Button variant="secondary" onclick={() => { showNewForm = false; }}>Cancel</Button>
-						<Button onclick={handleCreateIncident} disabled={data.groups.length === 0}>Create Incident</Button>
+						<Button
+							variant="secondary"
+							onclick={() => {
+								showNewForm = false;
+							}}>Cancel</Button
+						>
+						<Button onclick={handleCreateIncident} disabled={data.groups.length === 0}
+							>Create Incident</Button
+						>
 					</div>
 				</div>
 			</Card>
@@ -249,18 +271,30 @@
 								<div class="flex-1">
 									<div class="flex items-center gap-2">
 										<h4 class="font-semibold text-gray-900">{incident.title}</h4>
-										<span class="rounded-full px-2 py-0.5 text-xs font-medium {getStatusColor(incident.status)}">
+										<span
+											class="rounded-full px-2 py-0.5 text-xs font-medium {getStatusColor(
+												incident.status
+											)}"
+										>
 											{incident.status.charAt(0).toUpperCase() + incident.status.slice(1)}
 										</span>
 										{#if incident.group_name}
-											<span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{incident.group_name}</span>
+											<span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+												>{incident.group_name}</span
+											>
 										{/if}
 									</div>
-									<p class="mt-1 text-xs text-gray-500">Started {formatTime(incident.created_at)}</p>
+									<p class="mt-1 text-xs text-gray-500">
+										Started {formatTime(incident.created_at)}
+									</p>
 								</div>
 								<div class="flex gap-2">
-									<Button size="sm" variant="secondary" onclick={() => startUpdate(incident)}>Add Update</Button>
-									<Button size="sm" variant="danger" onclick={() => handleDelete(incident)}>Delete</Button>
+									<Button size="sm" variant="secondary" onclick={() => startUpdate(incident)}
+										>Add Update</Button
+									>
+									<Button size="sm" variant="danger" onclick={() => handleDelete(incident)}
+										>Delete</Button
+									>
 								</div>
 							</div>
 
@@ -290,8 +324,16 @@
 											></textarea>
 										</div>
 										<div class="flex justify-end gap-2">
-											<Button size="sm" variant="secondary" onclick={() => { updatingIncidentId = null; }}>Cancel</Button>
-											<Button size="sm" onclick={() => handleAddUpdate(incident.id)}>Post Update</Button>
+											<Button
+												size="sm"
+												variant="secondary"
+												onclick={() => {
+													updatingIncidentId = null;
+												}}>Cancel</Button
+											>
+											<Button size="sm" onclick={() => handleAddUpdate(incident.id)}
+												>Post Update</Button
+											>
 										</div>
 									</div>
 								</div>
@@ -304,7 +346,12 @@
 										{#each incident.updates as update}
 											<div class="flex gap-3">
 												<div class="flex flex-col items-center">
-													<div class="h-2 w-2 rounded-full {getStatusColor(update.status).replace('text-', 'bg-').replace('-100', '-500').replace('-700', '-500')}"></div>
+													<div
+														class="h-2 w-2 rounded-full {getStatusColor(update.status)
+															.replace('text-', 'bg-')
+															.replace('-100', '-500')
+															.replace('-700', '-500')}"
+													></div>
 													<div class="flex-1 w-px bg-gray-200"></div>
 												</div>
 												<div class="flex-1 pb-3">
@@ -312,7 +359,9 @@
 														<span class="font-medium capitalize">{update.status}</span>
 														<span class="text-gray-500"> - {update.message}</span>
 													</p>
-													<p class="mt-0.5 text-xs text-gray-400">{formatTime(update.created_at)}</p>
+													<p class="mt-0.5 text-xs text-gray-400">
+														{formatTime(update.created_at)}
+													</p>
 												</div>
 											</div>
 										{/each}
@@ -336,21 +385,27 @@
 								<div class="flex-1">
 									<div class="flex items-center gap-2">
 										<h4 class="font-semibold text-gray-700">{incident.title}</h4>
-										<span class="rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">
+										<span
+											class="rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700"
+										>
 											Resolved
 										</span>
 										{#if incident.group_name}
-											<span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{incident.group_name}</span>
+											<span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+												>{incident.group_name}</span
+											>
 										{/if}
 									</div>
 									<p class="mt-1 text-xs text-gray-500">
 										{formatTime(incident.created_at)}
 										{#if incident.resolved_at}
-											 - Resolved {formatTime(incident.resolved_at)}
+											- Resolved {formatTime(incident.resolved_at)}
 										{/if}
 									</p>
 								</div>
-								<Button size="sm" variant="danger" onclick={() => handleDelete(incident)}>Delete</Button>
+								<Button size="sm" variant="danger" onclick={() => handleDelete(incident)}
+									>Delete</Button
+								>
 							</div>
 
 							<!-- Collapsed Timeline -->
@@ -387,7 +442,11 @@
 						All systems are operating normally. Report an incident when issues occur.
 					</p>
 					<div class="mt-4">
-						<Button onclick={() => { showNewForm = true; }}>Report Incident</Button>
+						<Button
+							onclick={() => {
+								showNewForm = true;
+							}}>Report Incident</Button
+						>
 					</div>
 				</div>
 			</Card>

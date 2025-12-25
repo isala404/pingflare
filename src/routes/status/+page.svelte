@@ -9,7 +9,7 @@
 
 	// Compute overall status across all groups
 	function getGlobalStatus(groups: GroupWithStatus[]): OverallStatus {
-		const allMonitors: StatusMonitor[] = groups.flatMap(g => g.monitors);
+		const allMonitors: StatusMonitor[] = groups.flatMap((g) => g.monitors);
 		return getOverallStatus(allMonitors);
 	}
 
@@ -17,7 +17,11 @@
 	const statusText = $derived(getOverallStatusText(globalStatus));
 	const statusColor = $derived(getOverallStatusColor(globalStatus));
 
-	function getStatusBadge(status: OverallStatus): { text: string; bgClass: string; dotClass: string } {
+	function getStatusBadge(status: OverallStatus): {
+		text: string;
+		bgClass: string;
+		dotClass: string;
+	} {
 		switch (status) {
 			case 'operational':
 				return { text: 'Operational', bgClass: 'bg-green-50', dotClass: 'bg-green-500' };
@@ -63,14 +67,19 @@
 					<div class="flex items-center gap-2">
 						<h3 class="font-semibold text-orange-700">{incident.title}</h3>
 						{#if incident.group_name}
-							<span class="rounded bg-orange-100 px-2 py-0.5 text-xs text-orange-600">{incident.group_name}</span>
+							<span class="rounded bg-orange-100 px-2 py-0.5 text-xs text-orange-600"
+								>{incident.group_name}</span
+							>
 						{/if}
 					</div>
 					{#if incident.updates.length > 0}
 						<p class="mt-1 text-sm text-gray-600">
-							<span class="font-medium">{getStatusLabel(incident.updates[0].status)}</span> - {incident.updates[0].message}
+							<span class="font-medium">{getStatusLabel(incident.updates[0].status)}</span> - {incident
+								.updates[0].message}
 						</p>
-						<p class="mt-1 text-xs text-gray-500">{formatIncidentTime(incident.updates[0].created_at)}</p>
+						<p class="mt-1 text-xs text-gray-500">
+							{formatIncidentTime(incident.updates[0].created_at)}
+						</p>
 					{/if}
 				</div>
 			{/each}
@@ -99,7 +108,9 @@
 						</div>
 					</div>
 					<div class="mt-4 flex items-center justify-between text-sm">
-						<span class="text-gray-500">{group.monitors.length} monitor{group.monitors.length === 1 ? '' : 's'}</span>
+						<span class="text-gray-500"
+							>{group.monitors.length} monitor{group.monitors.length === 1 ? '' : 's'}</span
+						>
 						<span class="font-medium text-gray-700">{group.uptime_90d.toFixed(2)}% uptime</span>
 					</div>
 				</a>

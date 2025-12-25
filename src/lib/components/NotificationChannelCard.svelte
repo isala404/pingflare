@@ -64,7 +64,9 @@
 	<div class="flex items-start justify-between gap-4">
 		<div class="flex items-center gap-3 min-w-0">
 			<span
-				class="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-lg font-semibold {typeColors[channel.type]}"
+				class="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-lg font-semibold {typeColors[
+					channel.type
+				]}"
 			>
 				{channel.type.charAt(0).toUpperCase()}
 			</span>
@@ -72,7 +74,9 @@
 				<h3 class="font-medium text-gray-900 truncate">{channel.name}</h3>
 				<div class="flex flex-wrap items-center gap-2 mt-1">
 					<span
-						class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {typeColors[channel.type]}"
+						class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {typeColors[
+							channel.type
+						]}"
 					>
 						{typeLabels[channel.type]}
 					</span>

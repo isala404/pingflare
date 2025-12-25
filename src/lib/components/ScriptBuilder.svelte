@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
-	import type { ScriptDSL, ScriptStep, Assertion, HttpMethod } from '$lib/types/script';
+	import type {
+		ScriptDSL,
+		ScriptStep,
+		Assertion,
+		HttpMethod,
+		AssertionSeverity
+	} from '$lib/types/script';
 	import { createEmptyStep, createEmptyAssertion } from '$lib/types/script';
 
 	let {
@@ -21,6 +27,11 @@
 		{ value: 'hasKey', label: 'Has Key' },
 		{ value: 'minLength', label: 'Min Length' },
 		{ value: 'maxLength', label: 'Max Length' }
+	];
+
+	const severityOptions: { value: AssertionSeverity; label: string }[] = [
+		{ value: 'degraded', label: 'Degraded' },
+		{ value: 'down', label: 'Down' }
 	];
 
 	let expandedSteps = new SvelteSet([0]);
@@ -508,7 +519,9 @@
 								+ Add Assertion
 							</button>
 						</div>
-						<p class="text-xs text-gray-500 mt-1">Validate response values</p>
+						<p class="text-xs text-gray-500 mt-1">
+							Validate response values (status, responseTime, json.*, body, headers.*)
+						</p>
 						{#if step.assert && step.assert.length > 0}
 							<div class="mt-2 space-y-3">
 								{#each step.assert as assertion, assertIndex (assertIndex)}
@@ -517,14 +530,14 @@
 											<input
 												type="text"
 												bind:value={assertion.check}
-												class="col-span-2 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-1/4"
-												placeholder="status, json.id"
+												class="col-span-2 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-1/5"
+												placeholder="status, responseTime"
 											/>
 											<select
 												value={getAssertionOperator(assertion)}
 												onchange={(e) =>
 													updateAssertionOperator(assertion, (e.target as HTMLSelectElement).value)}
-												class="block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-1/4"
+												class="block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-1/5"
 											>
 												{#each assertionOperators as op (op.value)}
 													<option value={op.value}>{op.label}</option>
@@ -550,6 +563,20 @@
 													<option value="false">Should Not Exist</option>
 												</select>
 											{/if}
+											<select
+												value={assertion.severity ?? 'degraded'}
+												onchange={(e) => {
+													assertion.severity = (e.target as HTMLSelectElement)
+														.value as AssertionSeverity;
+													script.steps = [...script.steps];
+												}}
+												class="block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:w-32"
+												title="Failure severity"
+											>
+												{#each severityOptions as sev (sev.value)}
+													<option value={sev.value}>{sev.label}</option>
+												{/each}
+											</select>
 											<button
 												type="button"
 												onclick={() => removeAssertion(step, assertIndex)}

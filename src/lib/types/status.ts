@@ -67,8 +67,8 @@ export type OverallStatus = 'operational' | 'degraded' | 'major_outage' | 'parti
 export function getOverallStatus(monitors: StatusMonitor[]): OverallStatus {
 	if (monitors.length === 0) return 'operational';
 
-	const downCount = monitors.filter(m => m.current_status === 'down').length;
-	const degradedCount = monitors.filter(m => m.current_status === 'degraded').length;
+	const downCount = monitors.filter((m) => m.current_status === 'down').length;
+	const degradedCount = monitors.filter((m) => m.current_status === 'degraded').length;
 
 	if (downCount === monitors.length) return 'major_outage';
 	if (downCount > 0) return 'partial_outage';
@@ -78,18 +78,26 @@ export function getOverallStatus(monitors: StatusMonitor[]): OverallStatus {
 
 export function getOverallStatusText(status: OverallStatus): string {
 	switch (status) {
-		case 'operational': return 'All Systems Operational';
-		case 'degraded': return 'Degraded Performance';
-		case 'partial_outage': return 'Partial System Outage';
-		case 'major_outage': return 'Major System Outage';
+		case 'operational':
+			return 'All Systems Operational';
+		case 'degraded':
+			return 'Degraded Performance';
+		case 'partial_outage':
+			return 'Partial System Outage';
+		case 'major_outage':
+			return 'Major System Outage';
 	}
 }
 
 export function getOverallStatusColor(status: OverallStatus): string {
 	switch (status) {
-		case 'operational': return 'bg-green-500';
-		case 'degraded': return 'bg-yellow-500';
-		case 'partial_outage': return 'bg-orange-500';
-		case 'major_outage': return 'bg-red-500';
+		case 'operational':
+			return 'bg-green-500';
+		case 'degraded':
+			return 'bg-yellow-500';
+		case 'partial_outage':
+			return 'bg-orange-500';
+		case 'major_outage':
+			return 'bg-red-500';
 	}
 }

@@ -72,17 +72,9 @@
 		</div>
 
 		<div class="flex shrink-0 items-center gap-1">
-			<IconButton
-				icon="edit"
-				href={`/monitors/${monitor.id}/edit`}
-				label="Edit monitor"
-			/>
+			<IconButton icon="edit" href={`/monitors/${monitor.id}/edit`} label="Edit monitor" />
 			{#if onDelete}
-				<IconButton
-					icon="delete"
-					onclick={() => onDelete(monitor.id)}
-					label="Delete monitor"
-				/>
+				<IconButton icon="delete" onclick={() => onDelete(monitor.id)} label="Delete monitor" />
 			{/if}
 		</div>
 	</div>

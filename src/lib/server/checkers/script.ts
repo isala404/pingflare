@@ -8,6 +8,12 @@ export interface ScriptCheckResult {
 	errorMessage: string | null;
 }
 
+interface AssertionResult {
+	passed: boolean;
+	message: string;
+	severity: 'degraded' | 'down';
+}
+
 interface StepResult {
 	name: string;
 	status: number;
@@ -16,7 +22,7 @@ interface StepResult {
 	json: unknown;
 	headers: Record<string, string>;
 	error: string | null;
-	assertions: { passed: boolean; message: string }[];
+	assertions: AssertionResult[];
 }
 
 /**
@@ -71,8 +77,9 @@ export async function executeScript(
 		const variables: Record<string, unknown> = {};
 		const results: StepResult[] = [];
 		let lastStatusCode: number | null = null;
-		let allAssertionsPassed = true;
 		let anyRequestFailed = false;
+		let hasDownFailure = false;
+		let hasDegradedFailure = false;
 
 		for (const step of dsl.steps) {
 			const result = await executeStep(step, variables, timeoutMs);
@@ -84,10 +91,14 @@ export async function executeScript(
 				break;
 			}
 
-			// Check assertions
+			// Check assertions and track severity
 			for (const assertion of result.assertions) {
 				if (!assertion.passed) {
-					allAssertionsPassed = false;
+					if (assertion.severity === 'down') {
+						hasDownFailure = true;
+					} else {
+						hasDegradedFailure = true;
+					}
 				}
 			}
 
@@ -113,7 +124,7 @@ export async function executeScript(
 			};
 		}
 
-		if (!allAssertionsPassed) {
+		if (hasDownFailure || hasDegradedFailure) {
 			const failedByStep = results
 				.filter((r) => r.assertions.some((a) => !a.passed))
 				.map((r) => ({
@@ -150,7 +161,7 @@ export async function executeScript(
 			}
 
 			return {
-				status: 'degraded',
+				status: hasDownFailure ? 'down' : 'degraded',
 				responseTimeMs,
 				statusCode: lastStatusCode,
 				errorMessage
@@ -254,14 +265,15 @@ async function executeStep(
 		});
 
 		// Run assertions
-		const assertions: { passed: boolean; message: string }[] = [];
+		const assertions: AssertionResult[] = [];
 		if (step.assert) {
 			for (const assertion of step.assert) {
 				const result = runAssertion(assertion, {
 					status: response.status,
 					body: responseText,
 					json,
-					headers: responseHeaders
+					headers: responseHeaders,
+					responseTime: Math.round(endTime - startTime)
 				});
 				assertions.push(result);
 			}
@@ -343,15 +355,26 @@ function extractValue(result: StepResult, path: string): unknown {
 
 function runAssertion(
 	assertion: Assertion,
-	context: { status: number; body: string; json: unknown; headers: Record<string, string> }
-): { passed: boolean; message: string } {
-	const value = extractValue(context as unknown as StepResult, assertion.check);
+	context: {
+		status: number;
+		body: string;
+		json: unknown;
+		headers: Record<string, string>;
+		responseTime: number;
+	}
+): AssertionResult {
+	const severity = assertion.severity ?? 'degraded';
+	const value = extractValue(
+		{ ...context, responseTimeMs: context.responseTime } as unknown as StepResult,
+		assertion.check
+	);
 
 	// equals
 	if (assertion.equals !== undefined) {
 		const passed = value === assertion.equals;
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} equals ${assertion.equals}`
 				: `Expected ${assertion.check} to equal ${assertion.equals}, got ${JSON.stringify(value)}`
@@ -363,6 +386,7 @@ function runAssertion(
 		const passed = value !== assertion.notEquals;
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} not equals ${assertion.notEquals}`
 				: `Expected ${assertion.check} to not equal ${assertion.notEquals}`
@@ -375,6 +399,7 @@ function runAssertion(
 		const passed = strValue.includes(assertion.contains);
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} contains "${assertion.contains}"`
 				: `Expected ${assertion.check} to contain "${assertion.contains}"`
@@ -387,6 +412,7 @@ function runAssertion(
 		const passed = !strValue.includes(assertion.notContains);
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} does not contain "${assertion.notContains}"`
 				: `Expected ${assertion.check} to not contain "${assertion.notContains}"`
@@ -400,6 +426,7 @@ function runAssertion(
 		const passed = regex.test(strValue);
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} matches /${assertion.matches}/`
 				: `Expected ${assertion.check} to match /${assertion.matches}/`
@@ -412,6 +439,7 @@ function runAssertion(
 		const passed = !isNaN(numValue) && numValue > assertion.greaterThan;
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} > ${assertion.greaterThan}`
 				: `Expected ${assertion.check} to be > ${assertion.greaterThan}, got ${value}`
@@ -424,6 +452,7 @@ function runAssertion(
 		const passed = !isNaN(numValue) && numValue < assertion.lessThan;
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} < ${assertion.lessThan}`
 				: `Expected ${assertion.check} to be < ${assertion.lessThan}, got ${value}`
@@ -436,6 +465,7 @@ function runAssertion(
 		const passed = !isNaN(numValue) && numValue >= assertion.greaterOrEqual;
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} >= ${assertion.greaterOrEqual}`
 				: `Expected ${assertion.check} to be >= ${assertion.greaterOrEqual}, got ${value}`
@@ -448,6 +478,7 @@ function runAssertion(
 		const passed = !isNaN(numValue) && numValue <= assertion.lessOrEqual;
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} <= ${assertion.lessOrEqual}`
 				: `Expected ${assertion.check} to be <= ${assertion.lessOrEqual}, got ${value}`
@@ -461,6 +492,7 @@ function runAssertion(
 			: value === undefined || value === null;
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} ${assertion.exists ? 'exists' : 'does not exist'}`
 				: `Expected ${assertion.check} to ${assertion.exists ? 'exist' : 'not exist'}`
@@ -473,6 +505,7 @@ function runAssertion(
 			value !== null && typeof value === 'object' && assertion.hasKey in (value as object);
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} has key "${assertion.hasKey}"`
 				: `Expected ${assertion.check} to have key "${assertion.hasKey}"`
@@ -489,6 +522,7 @@ function runAssertion(
 		const passed = length === assertion.hasLength;
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} has length ${assertion.hasLength}`
 				: `Expected ${assertion.check} to have length ${assertion.hasLength}, got ${length}`
@@ -505,6 +539,7 @@ function runAssertion(
 		const passed = length >= assertion.minLength;
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} has length >= ${assertion.minLength}`
 				: `Expected ${assertion.check} to have length >= ${assertion.minLength}, got ${length}`
@@ -521,13 +556,14 @@ function runAssertion(
 		const passed = length <= assertion.maxLength;
 		return {
 			passed,
+			severity,
 			message: passed
 				? `${assertion.check} has length <= ${assertion.maxLength}`
 				: `Expected ${assertion.check} to have length <= ${assertion.maxLength}, got ${length}`
 		};
 	}
 
-	return { passed: true, message: 'No assertion to check' };
+	return { passed: true, severity, message: 'No assertion to check' };
 }
 
 /**

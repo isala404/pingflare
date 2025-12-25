@@ -1,6 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getGroupById, updateGroup, deleteGroup, getGroupMonitorCount } from '$lib/server/db/groups';
+import {
+	getGroupById,
+	updateGroup,
+	deleteGroup,
+	getGroupMonitorCount
+} from '$lib/server/db/groups';
 import type { UpdateGroupInput } from '$lib/types/group';
 
 export const GET: RequestHandler = async ({ params, platform }) => {

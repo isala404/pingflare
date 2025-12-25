@@ -31,7 +31,10 @@
 
 <PublicLayout>
 	<!-- Back link -->
-	<a href="/status" class="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+	<a
+		href="/status"
+		class="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+	>
 		<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 		</svg>
@@ -55,9 +58,12 @@
 					<h3 class="font-semibold text-orange-700">{incident.title}</h3>
 					{#if incident.updates.length > 0}
 						<p class="mt-1 text-sm text-gray-600">
-							<span class="font-medium">{getStatusLabel(incident.updates[0].status)}</span> - {incident.updates[0].message}
+							<span class="font-medium">{getStatusLabel(incident.updates[0].status)}</span> - {incident
+								.updates[0].message}
 						</p>
-						<p class="mt-1 text-xs text-gray-500">{formatIncidentTime(incident.updates[0].created_at)}</p>
+						<p class="mt-1 text-xs text-gray-500">
+							{formatIncidentTime(incident.updates[0].created_at)}
+						</p>
 					{/if}
 				</div>
 			{/each}

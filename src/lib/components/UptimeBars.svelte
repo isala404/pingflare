@@ -82,7 +82,9 @@
 		{#each days as day}
 			<button
 				type="button"
-				class="h-8 flex-1 rounded-sm transition-opacity hover:opacity-80 {getStatusColor(day.status)}"
+				class="h-8 flex-1 rounded-sm transition-opacity hover:opacity-80 {getStatusColor(
+					day.status
+				)}"
 				onmouseenter={(e) => handleMouseEnter(day, e)}
 				onmouseleave={handleMouseLeave}
 				aria-label="{formatDate(day.date)}: {day.status}"
@@ -117,7 +119,8 @@
 				<span class="capitalize">{hoveredDay.status}</span>
 				{#if hoveredDay.downtime_minutes > 0}
 					<span class="text-gray-500">
-						{Math.floor(hoveredDay.downtime_minutes / 60)}h {hoveredDay.downtime_minutes % 60}m downtime
+						{Math.floor(hoveredDay.downtime_minutes / 60)}h {hoveredDay.downtime_minutes % 60}m
+						downtime
 					</span>
 				{/if}
 			</div>

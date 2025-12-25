@@ -241,7 +241,9 @@ Requirement:
 			{/each}
 		</select>
 		{#if groups.length === 0}
-			<p class="mt-1 text-sm text-red-500">No groups available. <a href="/admin/groups" class="underline">Create a group first.</a></p>
+			<p class="mt-1 text-sm text-red-500">
+				No groups available. <a href="/admin/groups" class="underline">Create a group first.</a>
+			</p>
 		{/if}
 	</div>
 
@@ -331,9 +333,7 @@ Requirement:
 	</div>
 
 	<div class="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-end">
-		<Button type="button" variant="secondary" onclick={onCancel}>
-			Cancel
-		</Button>
+		<Button type="button" variant="secondary" onclick={onCancel}>Cancel</Button>
 		<Button type="submit" loading={isSubmitting} disabled={!canSave}>
 			{isSubmitting ? 'Saving...' : monitor ? 'Update Monitor' : 'Create Monitor'}
 		</Button>

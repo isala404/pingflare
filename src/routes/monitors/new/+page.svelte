@@ -17,7 +17,10 @@
 		saving = true;
 
 		try {
-			const monitorData: CreateMonitorInput = {
+			const notificationsJson = formData.get('notifications') as string;
+			const notifications = notificationsJson ? JSON.parse(notificationsJson) : [];
+
+			const monitorData: CreateMonitorInput & { notifications?: unknown[] } = {
 				name: formData.get('name') as string,
 				group_id: formData.get('group_id') as string,
 				script: formData.get('script') as string,
@@ -28,7 +31,8 @@
 					? parseInt(formData.get('timeout_ms') as string, 10)
 					: undefined,
 				active: formData.get('active') === '1',
-				is_public: formData.get('is_public') === '1'
+				is_public: formData.get('is_public') === '1',
+				notifications
 			};
 
 			const response = await fetch('/api/monitors', {

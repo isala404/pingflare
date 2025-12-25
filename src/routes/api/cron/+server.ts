@@ -1,6 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getActiveMonitors, insertCheck, getLastCheck, cleanupOldChecks } from '$lib/server/db/monitors';
+import {
+	getActiveMonitors,
+	insertCheck,
+	getLastCheck,
+	cleanupOldChecks
+} from '$lib/server/db/monitors';
 import { runCheck } from '$lib/server/checkers';
 import { sendNotifications } from '$lib/server/notifications';
 import { aggregateDailyStatus, cleanupOldDailyStatus } from '$lib/server/db/status';

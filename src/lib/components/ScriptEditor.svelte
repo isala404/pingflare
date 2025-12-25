@@ -89,7 +89,9 @@
 
 <div class="space-y-3">
 	<div class="flex items-center justify-between">
-		<label for="script-editor" class="block text-sm font-medium text-gray-700">Script (JSON DSL)</label>
+		<label for="script-editor" class="block text-sm font-medium text-gray-700"
+			>Script (JSON DSL)</label
+		>
 		<Button variant="ghost" size="sm" onclick={formatCode}>Format JSON</Button>
 	</div>
 
@@ -122,8 +124,8 @@
 				<code class="rounded bg-gray-200 px-1">headers.content-type</code>
 			</p>
 			<p>
-				<strong>Variables:</strong> Use <code class="rounded bg-gray-200 px-1">{'${varName}'}</code> in URLs,
-				headers, and body
+				<strong>Variables:</strong> Use <code class="rounded bg-gray-200 px-1">{'${varName}'}</code> in
+				URLs, headers, and body
 			</p>
 			<p>
 				<strong>Assertions:</strong> equals, notEquals, contains, matches (regex), greaterThan, lessThan,

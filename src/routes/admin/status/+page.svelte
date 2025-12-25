@@ -11,7 +11,7 @@
 
 	// Compute overall status across all groups
 	function getGlobalStatus(groups: GroupWithStatus[]): OverallStatus {
-		const allMonitors: StatusMonitor[] = groups.flatMap(g => g.monitors);
+		const allMonitors: StatusMonitor[] = groups.flatMap((g) => g.monitors);
 		return getOverallStatus(allMonitors);
 	}
 
@@ -20,7 +20,10 @@
 	}
 
 	function getOperationalCount(groups: GroupWithStatus[]): number {
-		return groups.reduce((sum, g) => sum + g.monitors.filter(m => m.current_status === 'up').length, 0);
+		return groups.reduce(
+			(sum, g) => sum + g.monitors.filter((m) => m.current_status === 'up').length,
+			0
+		);
 	}
 
 	const globalStatus = $derived(getGlobalStatus(data.groups));
@@ -52,9 +55,7 @@
 		<PageHeader title="Status Overview" backHref="/">
 			{#snippet actions()}
 				<div class="flex gap-2">
-					<Button variant="secondary" href="/admin/groups">
-						Manage Groups
-					</Button>
+					<Button variant="secondary" href="/admin/groups">Manage Groups</Button>
 					<a
 						href="/status"
 						target="_blank"
@@ -62,9 +63,7 @@
 					>
 						View Public Page
 					</a>
-					<Button href="/admin/incidents">
-						Manage Incidents
-					</Button>
+					<Button href="/admin/incidents">Manage Incidents</Button>
 				</div>
 			{/snippet}
 		</PageHeader>
@@ -73,7 +72,9 @@
 		<div class="mb-8 rounded-lg p-6 text-white {statusColor}">
 			<div class="flex items-center gap-3">
 				<span class="relative flex h-4 w-4">
-					<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-50"></span>
+					<span
+						class="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-50"
+					></span>
 					<span class="relative inline-flex h-4 w-4 rounded-full bg-white"></span>
 				</span>
 				<h2 class="text-xl font-semibold">{statusText}</h2>
@@ -94,12 +95,15 @@
 								<div class="flex items-center gap-2">
 									<h4 class="font-semibold text-orange-700">{incident.title}</h4>
 									{#if incident.group_name}
-										<span class="rounded bg-orange-100 px-2 py-0.5 text-xs text-orange-600">{incident.group_name}</span>
+										<span class="rounded bg-orange-100 px-2 py-0.5 text-xs text-orange-600"
+											>{incident.group_name}</span
+										>
 									{/if}
 								</div>
 								{#if incident.updates.length > 0}
 									<p class="mt-1 text-sm text-gray-600">
-										<span class="font-medium capitalize">{incident.updates[0].status}</span> - {incident.updates[0].message}
+										<span class="font-medium capitalize">{incident.updates[0].status}</span> - {incident
+											.updates[0].message}
 									</p>
 								{/if}
 							</div>
@@ -151,9 +155,7 @@
 									{/each}
 								</div>
 							{:else}
-								<div class="p-4 text-center text-sm text-gray-500">
-									No monitors in this group.
-								</div>
+								<div class="p-4 text-center text-sm text-gray-500">No monitors in this group.</div>
 							{/if}
 						</div>
 					{/each}

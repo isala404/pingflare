@@ -16,8 +16,11 @@ export type AssertionOperator =
 	| 'minLength'
 	| 'maxLength';
 
+export type AssertionSeverity = 'degraded' | 'down';
+
 export interface Assertion {
 	check: string;
+	severity?: AssertionSeverity;
 	equals?: unknown;
 	notEquals?: unknown;
 	contains?: string;

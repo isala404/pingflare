@@ -109,10 +109,12 @@ Script Checker (JSON DSL)
 - Variable extraction: "extract": { "token": "json.access_token" }
 - Variable interpolation: ${varName} in URLs, headers, body
 - Assertions: equals, notEquals, contains, notContains, matches (regex), greaterThan, lessThan, greaterOrEqual, lessOrEqual, minLength, maxLength, hasLength, hasKey, exists
-- Path notation: json.user.name, json.items[0].id, status, body, headers.content-type
-- Status: all pass = up, request fails = down, assertion fails = degraded
+- Assertion severity: each assertion has optional "severity": "degraded" | "down" (default: degraded)
+- Path notation: json.user.name, json.items[0].id, status, responseTime, body, headers.content-type
+- responseTime: per-step response time in ms, use for performance assertions (e.g., { "check": "responseTime", "lessThan": 500 })
+- Status determination: request fails = down, assertion with severity=down fails = down, assertion with severity=degraded fails = degraded, all pass = up
 - Validation function: validateScript() in src/lib/server/checkers/script.ts
-- Shared types: src/lib/types/script.ts (ScriptDSL, ScriptStep, Assertion, HttpMethod)
+- Shared types: src/lib/types/script.ts (ScriptDSL, ScriptStep, Assertion, AssertionSeverity, HttpMethod)
 
 Caching Strategy
 

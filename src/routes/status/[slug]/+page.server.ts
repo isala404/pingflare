@@ -37,13 +37,15 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 
 async function getActiveIncidentsForGroup(db: D1Database, groupId: string): Promise<Incident[]> {
 	const incidents = await db
-		.prepare(`
+		.prepare(
+			`
 			SELECT i.*, g.name as group_name
 			FROM incidents i
 			LEFT JOIN monitor_groups g ON i.group_id = g.id
 			WHERE i.status != 'resolved' AND i.group_id = ?
 			ORDER BY i.created_at DESC
-		`)
+		`
+		)
 		.bind(groupId)
 		.all<Incident & { group_name: string }>();
 
@@ -84,13 +86,15 @@ async function getRecentIncidentsByDateForGroup(
 		});
 
 		const incidents = await db
-			.prepare(`
+			.prepare(
+				`
 				SELECT i.*, g.name as group_name
 				FROM incidents i
 				LEFT JOIN monitor_groups g ON i.group_id = g.id
 				WHERE date(i.created_at) = ? AND i.group_id = ?
 				ORDER BY i.created_at DESC
-			`)
+			`
+			)
 			.bind(dateStr, groupId)
 			.all<Incident & { group_name: string }>();
 
