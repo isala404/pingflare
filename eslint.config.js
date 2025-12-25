@@ -32,6 +32,6 @@ export default [
 		}
 	},
 	{
-		ignores: ['build/', '.svelte-kit/', 'dist/', 'dev-dist/']
+		ignores: ['.svelte-kit/', 'dist/', 'dev-dist/']
 	}
 ];

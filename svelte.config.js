@@ -7,6 +7,7 @@ const config = {
 
 	kit: {
 		adapter: adapter({
+			config: 'wrangler.build.toml',
 			routes: {
 				include: ['/*'],
 				exclude: ['<all>']

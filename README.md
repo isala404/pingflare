@@ -77,8 +77,7 @@ wrangler d1 create pingflare-db
 bun run build && bun run deploy
 
 # Set the cron secret (required for scheduled health checks)
-wrangler secret put CRON_SECRET
-# Enter a random string (generate with: openssl rand -hex 32)
+openssl rand -hex 32 | wrangler secret put CRON_SECRET
 ```
 
 ## Local Development

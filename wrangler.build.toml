@@ -9,7 +9,7 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 [[d1_databases]]
 binding = "DB"
 database_name = "pingflare-db"
-database_id = "f53140e2-d3ea-4d34-b6f6-92db167c64d9"
+database_id = "ba9bdc5e-7f72-42b8-9d69-8b8a17bd2cdb"
 
 [vars]
 ENVIRONMENT = "production"

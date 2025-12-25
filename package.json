@@ -6,9 +6,7 @@
 		"@cloudflare/workers-types": "^4.20251202.0",
 		"esbuild": "^0.24.0",
 		"@eslint/js": "^9.39.1",
-		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/adapter-cloudflare": "^7.2.4",
-		"@sveltejs/adapter-node": "^5.4.0",
 		"@sveltejs/kit": "^2.48.5",
 		"@sveltejs/vite-plugin-svelte": "^6.2.1",
 		"@tailwindcss/vite": "^4.1.17",
@@ -35,7 +33,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
-		"build": "mv wrangler.toml wrangler.deploy.toml && mv wrangler.build.toml wrangler.toml && vite build && mv wrangler.toml wrangler.build.toml && mv wrangler.deploy.toml wrangler.toml && node scripts/build-worker.js",
+		"build": "vite build && node scripts/build-worker.js",
 		"build:sveltekit": "vite build",
 		"build:worker": "node scripts/build-worker.js",
 		"preview": "vite preview",

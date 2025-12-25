@@ -324,6 +324,15 @@ Optimized Deploy to Cloudflare button support with D1 migrations and cron schedu
 - Added cloudflare.bindings description in package.json for deploy button UI
 - Rewrote README.md: Comprehensive documentation with deploy button, features, architecture, usage guide, DSL reference
 
+Cleaned up project files and simplified build script.
+
+- Simplified build script from file-swapping hack to direct command (svelte.config.js now uses `config: 'wrangler.build.toml'`)
+- Removed unused adapter packages (@sveltejs/adapter-auto, @sveltejs/adapter-node)
+- Deleted stale build/ directory (old adapter-node output)
+- Removed .npmrc (not needed for bun), .dev.vars.example (empty template)
+- Simplified .prettierignore to only necessary entries
+- Updated .gitignore and eslint.config.js to remove /build references
+
 Fixed critical API authentication vulnerability - all admin endpoints now require authentication.
 
 - Added `locals.user` auth guard to all admin API endpoints (22 handlers total)
