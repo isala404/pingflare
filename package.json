@@ -55,6 +55,9 @@
 		"bindings": {
 			"DB": {
 				"description": "D1 database for storing monitors, health check results, users, and incidents. Created automatically during deployment."
+			},
+			"CRON_SECRET": {
+				"description": "Random string to authenticate scheduled health checks. Generate with: `openssl rand -hex 32`"
 			}
 		}
 	}
